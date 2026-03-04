@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import axios from 'axios';
 import useBrainStore from '../store/brainStore';
 
-const API = 'http://localhost:3001';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export function useBrainData() {
     const { setBrainData, setLoading, setError } = useBrainStore();
