@@ -17,6 +17,10 @@ import { config } from './config/env.js';
 import { initWebSocket } from './services/websocket.js';
 import { startScheduler } from './services/scheduler.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { initFirebaseAdmin } from './lib/firebaseAdmin.js';
+
+// Initialize Firebase Admin SDK (for auth token verification)
+initFirebaseAdmin();
 
 // Routes
 import knowledgeRoutes from './routes/knowledge.js';

@@ -7,7 +7,8 @@ import FeynmanPanel from './components/UI/FeynmanPanel';
 import ChatPanel from './components/UI/ChatPanel';
 import BeliefEvolutionPanel from './components/UI/BeliefEvolutionPanel';
 import Toast from './components/UI/Toast';
-import PasswordGate from './components/UI/PasswordGate';
+import AuthScreen from './components/UI/AuthScreen';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useBrainData } from './hooks/useBrainData';
 import { useSocket } from './hooks/useSocket';
 import { useDecayTicker } from './hooks/useDecayTicker';
@@ -87,18 +88,34 @@ function FeynmanApp() {
   );
 }
 
-export default function App() {
-  const [authenticated, setAuthenticated] = useState(
-    () => sessionStorage.getItem('feynman_auth') === 'true'
-  );
+function AppRouter() {
+  const { user, loading } = useAuth();
 
-  const handleUnlock = useCallback(() => {
-    setAuthenticated(true);
-  }, []);
+  if (loading) {
+    return (
+      <div style={{
+        width: '100vw', height: '100vh', display: 'flex',
+        alignItems: 'center', justifyContent: 'center',
+        background: '#020408', color: '#4a9eba',
+        fontFamily: "'SF Pro Text', -apple-system, sans-serif",
+        fontSize: '14px', letterSpacing: '2px',
+      }}>
+        Loading...
+      </div>
+    );
+  }
 
-  if (!authenticated) {
-    return <PasswordGate onUnlock={handleUnlock} />;
+  if (!user) {
+    return <AuthScreen />;
   }
 
   return <FeynmanApp />;
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppRouter />
+    </AuthProvider>
+  );
 }
