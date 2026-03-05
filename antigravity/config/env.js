@@ -4,17 +4,20 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Helper: clean env vars (strip quotes, newlines, whitespace)
+const clean = (val) => val ? val.trim().replace(/^["']|["']$/g, '') : undefined;
+
 export const config = {
   // Supabase
-  SUPABASE_URL: process.env.SUPABASE_URL,
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+  SUPABASE_URL: clean(process.env.SUPABASE_URL),
+  SUPABASE_ANON_KEY: clean(process.env.SUPABASE_ANON_KEY),
 
   // Groq (Llama 3.3 70B)
-  GROQ_API_KEY: process.env.GROQ_API_KEY,
+  GROQ_API_KEY: clean(process.env.GROQ_API_KEY),
 
   // Server
   PORT: parseInt(process.env.PORT || '3001', 10),
-  NODE_ENV: process.env.NODE_ENV || 'development',
+  NODE_ENV: (process.env.NODE_ENV || 'development').trim(),
 };
 
 // Validate critical env vars on startup
