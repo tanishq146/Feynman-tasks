@@ -1,12 +1,8 @@
 // ─── Firebase Admin SDK ────────────────────────────────────────────────────
 // Initializes Firebase Admin for server-side token verification.
 //
-// Setup options (choose one):
-// 1. Set FIREBASE_SERVICE_ACCOUNT env var with the full JSON string of your
-//    service account key (recommended for production / Render).
-// 2. Set GOOGLE_APPLICATION_CREDENTIALS env var to the path of a local
-//    service account JSON file (for local development).
-// 3. If deployed on Google Cloud, default credentials work automatically.
+// Setup: Set FIREBASE_SERVICE_ACCOUNT env var with the full JSON string
+// of your service account key.
 
 import admin from 'firebase-admin';
 
@@ -16,29 +12,45 @@ export function initFirebaseAdmin() {
     if (initialized) return;
 
     try {
-        const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
+        const serviceAccountRaw = process.env.FIREBASE_SERVICE_ACCOUNT;
 
-        if (serviceAccount) {
-            // Option 1: JSON string from env var
-            const parsed = JSON.parse(serviceAccount);
+        if (serviceAccountRaw) {
+            let parsed;
+            try {
+                parsed = JSON.parse(serviceAccountRaw);
+            } catch (parseErr) {
+                // Sometimes env vars escape newlines as literal \n — fix them
+                const fixed = serviceAccountRaw.replace(/\\n/g, '\n');
+                parsed = JSON.parse(fixed);
+            }
+
+            // Fix private_key newlines (common Render issue)
+            if (parsed.private_key) {
+                parsed.private_key = parsed.private_key.replace(/\\n/g, '\n');
+            }
+
             admin.initializeApp({
                 credential: admin.credential.cert(parsed),
             });
+            console.log('🔐 Firebase Admin initialized with service account');
         } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-            // Option 2: File path to service account key
             admin.initializeApp({
                 credential: admin.credential.applicationDefault(),
             });
+            console.log('🔐 Firebase Admin initialized with application default credentials');
         } else {
-            // Option 3: Default credentials (GCP) or no credentials (local dev)
             console.warn('⚠️  No Firebase credentials found — auth middleware will skip verification in development.');
             admin.initializeApp();
         }
 
         initialized = true;
-        console.log('🔐 Firebase Admin initialized');
     } catch (err) {
         console.error('❌ Firebase Admin init failed:', err.message);
+        // Still initialize without credentials so the app doesn't crash
+        if (!admin.apps.length) {
+            admin.initializeApp();
+        }
+        initialized = true;
     }
 }
 

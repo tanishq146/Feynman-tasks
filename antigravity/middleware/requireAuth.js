@@ -59,6 +59,7 @@ export async function requireAuth(req, res, next) {
         }
 
         console.error('🔒 Auth failed:', err.message);
+        console.error('🔒 Token prefix:', token?.substring(0, 20) + '...');
         return res.status(401).json({ error: 'Invalid or expired token' });
     }
 }
