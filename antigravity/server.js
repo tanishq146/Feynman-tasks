@@ -95,7 +95,7 @@ initWebSocket(server);
 startScheduler();
 
 // Launch
-server.listen(config.PORT, () => {
+server.listen(config.PORT, '0.0.0.0', () => {
     console.log(`
   ╔════════════════════════════════════════════════════════════╗
   ║                                                            ║
