@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import BrainScene from './components/Brain/BrainScene';
 import InputBar from './components/UI/InputBar';
@@ -7,11 +7,12 @@ import FeynmanPanel from './components/UI/FeynmanPanel';
 import ChatPanel from './components/UI/ChatPanel';
 import BeliefEvolutionPanel from './components/UI/BeliefEvolutionPanel';
 import Toast from './components/UI/Toast';
+import PasswordGate from './components/UI/PasswordGate';
 import { useBrainData } from './hooks/useBrainData';
 import { useSocket } from './hooks/useSocket';
 import { useDecayTicker } from './hooks/useDecayTicker';
 
-export default function App() {
+function FeynmanApp() {
   // Initialize data fetching and WebSocket connection
   useBrainData();
   useSocket();
@@ -86,3 +87,18 @@ export default function App() {
   );
 }
 
+export default function App() {
+  const [authenticated, setAuthenticated] = useState(
+    () => sessionStorage.getItem('feynman_auth') === 'true'
+  );
+
+  const handleUnlock = useCallback(() => {
+    setAuthenticated(true);
+  }, []);
+
+  if (!authenticated) {
+    return <PasswordGate onUnlock={handleUnlock} />;
+  }
+
+  return <FeynmanApp />;
+}

@@ -9,6 +9,8 @@ const sfText = "'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, san
 
 export default function ChatPanel() {
     const [isOpen, setIsOpen] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
+    const panelWidth = isExpanded ? 600 : 360;
     const [messages, setMessages] = useState([
         { role: 'assistant', content: 'Hey! I\'m **Feynman** — your second brain. Ask me anything about what you\'ve learned, or just chat. ✦' }
     ]);
@@ -332,22 +334,24 @@ export default function ChatPanel() {
                     <motion.div
                         initial={{ x: -380, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: -380, opacity: 0 }}
+                        exit={{ x: isExpanded ? 0 : -380, opacity: 0 }}
                         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                         style={{
                             position: 'fixed',
                             left: 0,
                             top: 0,
                             bottom: 0,
-                            width: '360px',
+                            right: isExpanded ? 0 : 'auto',
+                            width: isExpanded ? '100%' : '360px',
                             zIndex: 55,
-                            background: 'rgba(2, 6, 16, 0.95)',
+                            background: isExpanded ? 'rgba(2, 6, 16, 0.98)' : 'rgba(2, 6, 16, 0.95)',
                             backdropFilter: 'blur(30px)',
                             WebkitBackdropFilter: 'blur(30px)',
-                            borderRight: '1px solid rgba(0, 212, 255, 0.1)',
+                            borderRight: isExpanded ? 'none' : '1px solid rgba(0, 212, 255, 0.1)',
                             display: 'flex',
                             flexDirection: 'column',
-                            boxShadow: '4px 0 40px rgba(0, 0, 0, 0.5)',
+                            boxShadow: isExpanded ? 'none' : '4px 0 40px rgba(0, 0, 0, 0.5)',
+                            transition: 'width 0.4s cubic-bezier(0.22, 1, 0.36, 1), background 0.4s ease, right 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
                         }}
                     >
                         {/* Header */}
@@ -370,6 +374,31 @@ export default function ChatPanel() {
                                     fontFamily: sfText, fontSize: '10px',
                                     color: 'rgba(0, 212, 255, 0.5)', marginLeft: 'auto',
                                 }}>Your Second Brain</span>
+
+                                {/* Expand / Collapse toggle */}
+                                <motion.button
+                                    onClick={() => setIsExpanded(!isExpanded)}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    title={isExpanded ? 'Compact view' : 'Expanded view'}
+                                    style={{
+                                        width: '28px',
+                                        height: '28px',
+                                        borderRadius: '8px',
+                                        border: `1px solid ${isExpanded ? 'rgba(0, 212, 255, 0.3)' : 'rgba(255, 255, 255, 0.08)'}`,
+                                        background: isExpanded ? 'rgba(0, 212, 255, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                                        color: isExpanded ? '#00d4ff' : '#4a5568',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '14px',
+                                        flexShrink: 0,
+                                        transition: 'all 0.2s ease',
+                                    }}
+                                >
+                                    {isExpanded ? '⇋' : '⇔'}
+                                </motion.button>
                             </div>
 
                             {/* Why Chain Toggle */}
@@ -455,8 +484,12 @@ export default function ChatPanel() {
                         {/* Messages */}
                         <div
                             style={{
-                                flex: 1, overflowY: 'auto', padding: '16px',
+                                flex: 1, overflowY: 'auto',
+                                padding: isExpanded ? '24px 32px' : '16px',
                                 display: 'flex', flexDirection: 'column', gap: '12px',
+                                maxWidth: isExpanded ? '800px' : 'none',
+                                margin: isExpanded ? '0 auto' : '0',
+                                width: '100%',
                             }}
                             className="chat-scrollbar"
                         >
@@ -606,8 +639,11 @@ export default function ChatPanel() {
 
                         {/* Input Area */}
                         <div style={{
-                            padding: '12px 16px 16px',
+                            padding: isExpanded ? '16px 32px 20px' : '12px 16px 16px',
                             borderTop: '1px solid rgba(0, 212, 255, 0.08)',
+                            maxWidth: isExpanded ? '800px' : 'none',
+                            margin: isExpanded ? '0 auto' : '0',
+                            width: '100%',
                         }}>
                             {/* Why Chain active status */}
                             {whyChainActive && (
