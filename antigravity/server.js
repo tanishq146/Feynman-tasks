@@ -17,6 +17,7 @@ import { config } from './config/env.js';
 import { initWebSocket } from './services/websocket.js';
 import { startScheduler } from './services/scheduler.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { requireAuth } from './middleware/requireAuth.js';
 import { initFirebaseAdmin } from './lib/firebaseAdmin.js';
 
 // Initialize Firebase Admin SDK (for auth token verification)
@@ -70,12 +71,12 @@ app.get('/api/health', (_req, res) => {
 
 // ─── API Routes ─────────────────────────────────────────────────────────────
 
-app.use('/api/knowledge', knowledgeRoutes);
-app.use('/api/brain', brainRoutes);
-app.use('/api/goals', goalRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/beliefs', beliefRoutes);
+app.use('/api/knowledge', requireAuth, knowledgeRoutes);
+app.use('/api/brain', requireAuth, brainRoutes);
+app.use('/api/goals', requireAuth, goalRoutes);
+app.use('/api/ai', requireAuth, aiRoutes);
+app.use('/api/chat', requireAuth, chatRoutes);
+app.use('/api/beliefs', requireAuth, beliefRoutes);
 
 
 // ─── 404 Catch-all ──────────────────────────────────────────────────────────

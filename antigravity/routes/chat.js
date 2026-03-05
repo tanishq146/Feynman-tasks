@@ -21,6 +21,7 @@ router.post('/', async (req, res, next) => {
         const { data: nodes } = await supabase
             .from('knowledge_nodes')
             .select('title, summary, tags, raw_content, brain_region, topic_category')
+            .eq('user_id', req.user.uid)
             .order('created_at', { ascending: false })
             .limit(50);
 

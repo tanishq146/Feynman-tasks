@@ -20,7 +20,8 @@ router.get('/map', async (req, res, next) => {
         try {
             const { data: nodesData, error: nodesError } = await supabase
                 .from('knowledge_nodes')
-                .select('*');
+                .select('*')
+                .eq('user_id', req.user.uid);
 
             if (nodesError) {
                 console.error('⚠️ Supabase nodes query error:', nodesError.message);
@@ -35,7 +36,8 @@ router.get('/map', async (req, res, next) => {
         try {
             const { data: edgesData, error: edgesError } = await supabase
                 .from('connection_edges')
-                .select('*');
+                .select('*')
+                .eq('user_id', req.user.uid);
 
             if (edgesError) {
                 console.error('⚠️ Supabase edges query error:', edgesError.message);

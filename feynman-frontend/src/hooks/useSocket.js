@@ -1,8 +1,9 @@
 import { useEffect, useRef, useCallback } from 'react';
 import useBrainStore from '../store/brainStore';
 
-const WS_URL = import.meta.env.VITE_API_URL
-    ? `wss://${import.meta.env.VITE_API_URL.replace('https://', '')}/ws`
+const API_URL = import.meta.env.VITE_API_URL || '';
+const WS_URL = API_URL
+    ? `${API_URL.startsWith('https') ? 'wss' : 'ws'}://${API_URL.replace(/^https?:\/\//, '')}/ws`
     : `ws://${window.location.hostname}:3001/ws`;
 
 export function useSocket() {

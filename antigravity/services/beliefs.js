@@ -140,7 +140,7 @@ New belief (${newBelief.category}, confidence ${newBelief.confidence_score}):
  * Called asynchronously after knowledge ingestion.
  * @param {object} node - The saved knowledge node
  */
-export async function processBeliefForNode(node) {
+export async function processBeliefForNode(node, userId) {
     try {
         // Step 1: Extract belief
         const extracted = await extractBelief(node);
@@ -153,6 +153,7 @@ export async function processBeliefForNode(node) {
         const beliefId = uuid();
         const belief = {
             id: beliefId,
+            user_id: userId,
             node_id: node.id,
             belief_statement: extracted.belief_statement,
             confidence_score: extracted.confidence_score,
@@ -176,6 +177,7 @@ export async function processBeliefForNode(node) {
         const { data: pastBeliefs } = await supabase
             .from('beliefs')
             .select('*')
+            .eq('user_id', userId)
             .eq('topic_tag', extracted.topic_tag)
             .neq('id', beliefId)
             .order('created_at', { ascending: false })
@@ -197,6 +199,7 @@ export async function processBeliefForNode(node) {
         // Step 5: Store the shift record
         const shift = {
             id: uuid(),
+            user_id: userId,
             old_belief_id: comparison.old_belief_id,
             new_belief_id: beliefId,
             shift_type: comparison.shift_type,

@@ -26,6 +26,7 @@ router.post('/', async (req, res, next) => {
 
         const goal = {
             id: uuid(),
+            user_id: req.user.uid,
             goal_text: goal_text.trim(),
             created_at: new Date().toISOString(),
         };
@@ -53,6 +54,7 @@ router.get('/', async (req, res, next) => {
         const { data, error } = await supabase
             .from('user_goals')
             .select('*')
+            .eq('user_id', req.user.uid)
             .order('created_at', { ascending: false });
 
         if (error) throw error;

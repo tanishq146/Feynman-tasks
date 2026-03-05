@@ -4,8 +4,9 @@
 //
 // Usage: app.use('/api/protected-route', requireAuth, routeHandler);
 //
-// In development (NODE_ENV !== 'production'), if no token is provided,
-// it skips auth so you can test freely.
+// In development (NODE_ENV !== 'production'), if token verification fails
+// due to missing Firebase credentials, it decodes the token without
+// verification so you can develop freely.
 
 import { admin } from '../lib/firebaseAdmin.js';
 
@@ -17,7 +18,7 @@ export async function requireAuth(req, res, next) {
         ? authHeader.slice(7)
         : null;
 
-    // Dev mode: allow unauthenticated requests if no token is present
+    // No token at all
     if (!token) {
         if (process.env.NODE_ENV !== 'production') {
             req.user = { uid: 'dev-user', email: 'dev@feynman.local', name: 'Developer' };
@@ -26,6 +27,7 @@ export async function requireAuth(req, res, next) {
         return res.status(401).json({ error: 'No authentication token provided' });
     }
 
+    // Try to verify the token properly
     try {
         const decoded = await admin.auth().verifyIdToken(token);
         req.user = {
@@ -34,8 +36,28 @@ export async function requireAuth(req, res, next) {
             name: decoded.name || decoded.email,
             picture: decoded.picture || null,
         };
-        next();
+        return next();
     } catch (err) {
+        // In development, decode the JWT payload without verification
+        // This lets you dev locally without a service account key
+        if (process.env.NODE_ENV !== 'production') {
+            try {
+                // Firebase ID tokens are JWTs — decode the payload (base64)
+                const payload = token.split('.')[1];
+                const decoded = JSON.parse(Buffer.from(payload, 'base64').toString());
+                req.user = {
+                    uid: decoded.user_id || decoded.sub || 'dev-user',
+                    email: decoded.email || 'dev@feynman.local',
+                    name: decoded.name || decoded.email || 'Developer',
+                    picture: decoded.picture || null,
+                };
+                console.log(`🔓 Dev auth (unverified): ${req.user.email} [${req.user.uid}]`);
+                return next();
+            } catch (decodeErr) {
+                console.error('🔒 Could not decode token:', decodeErr.message);
+            }
+        }
+
         console.error('🔒 Auth failed:', err.message);
         return res.status(401).json({ error: 'Invalid or expired token' });
     }

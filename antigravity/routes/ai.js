@@ -33,6 +33,7 @@ router.post('/feynman/:id', async (req, res, next) => {
             .from('knowledge_nodes')
             .select('*')
             .eq('id', nodeId)
+            .eq('user_id', req.user.uid)
             .single();
 
         if (error) {
@@ -72,7 +73,8 @@ router.post('/feynman/:id', async (req, res, next) => {
                 // Get user goals
                 const { data: goals } = await supabase
                     .from('user_goals')
-                    .select('goal_text');
+                    .select('goal_text')
+                    .eq('user_id', req.user.uid);
 
                 // Generate the Feynman analysis
                 const feynman = await generateFeynmanAnalysis(node, connectedNodes, goals || []);
@@ -111,6 +113,7 @@ router.post('/feynman/:id/extras', async (req, res, next) => {
             .from('knowledge_nodes')
             .select('*')
             .eq('id', nodeId)
+            .eq('user_id', req.user.uid)
             .single();
 
         if (error) {
@@ -211,6 +214,7 @@ router.post('/feynman/:id/challenge', async (req, res, next) => {
             .from('knowledge_nodes')
             .select('*')
             .eq('id', nodeId)
+            .eq('user_id', req.user.uid)
             .single();
 
         if (error) {
@@ -282,6 +286,7 @@ router.post('/feynman/:id/teach', async (req, res, next) => {
             .from('knowledge_nodes')
             .select('*')
             .eq('id', nodeId)
+            .eq('user_id', req.user.uid)
             .single();
 
         if (error) {
@@ -363,6 +368,7 @@ router.post('/feynman/:id/moment', async (req, res, next) => {
             .from('knowledge_nodes')
             .select('*')
             .eq('id', nodeId)
+            .eq('user_id', req.user.uid)
             .single();
 
         if (error) {

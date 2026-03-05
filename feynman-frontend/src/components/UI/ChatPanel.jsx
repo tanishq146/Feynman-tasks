@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
+import api from '../../lib/api';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const sfDisplay = "'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
 const sfText = "'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
@@ -65,7 +64,7 @@ export default function ChatPanel() {
         }
 
         try {
-            const { data } = await axios.post(`${API}/api/chat`, {
+            const { data } = await api.post('/api/chat', {
                 message: text,
                 history: messages,
             });
@@ -105,7 +104,7 @@ export default function ChatPanel() {
         setLoading(true);
 
         try {
-            const { data } = await axios.post(`${API}/api/chat/why-chain`, {
+            const { data } = await api.post('/api/chat/why-chain', {
                 message: aiAnswer,
                 depth: 0,
                 chainResponses: [],
@@ -139,7 +138,7 @@ export default function ChatPanel() {
         setWhyChainResponses(newChainResponses);
 
         try {
-            const { data } = await axios.post(`${API}/api/chat/why-chain`, {
+            const { data } = await api.post('/api/chat/why-chain', {
                 message: userResponse,
                 depth: whyChainDepth,
                 chainResponses: newChainResponses,

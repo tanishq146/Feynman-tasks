@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
+import api from '../../lib/api';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const sfDisplay = "'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
 const sfText = "'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
@@ -23,7 +22,7 @@ export default function BeliefEvolutionPanel({ isOpen, onClose }) {
         setLoading(true);
         setError(null);
         try {
-            const { data: evo } = await axios.get(`${API}/api/beliefs/evolution`);
+            const { data: evo } = await api.get('/api/beliefs/evolution');
             setData(evo);
         } catch (err) {
             console.error('Belief evolution fetch error:', err);

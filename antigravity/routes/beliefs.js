@@ -9,17 +9,19 @@ const router = Router();
 
 // ─── GET /api/beliefs/evolution ─────────────────────────────────────────────
 // Returns belief evolution dashboard data.
-router.get('/evolution', async (_req, res, next) => {
+router.get('/evolution', async (req, res, next) => {
     try {
         // Total beliefs
         const { count: totalBeliefs } = await supabase
             .from('beliefs')
-            .select('*', { count: 'exact', head: true });
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', req.user.uid);
 
         // Total shifts (only meaningful ones: contradiction + evolution)
         const { count: totalShifts } = await supabase
             .from('belief_shifts')
             .select('*', { count: 'exact', head: true })
+            .eq('user_id', req.user.uid)
             .in('shift_type', ['contradiction', 'evolution', 'refinement']);
 
         // Most evolving topic — the topic_tag with the most shifts
@@ -33,6 +35,7 @@ router.get('/evolution', async (_req, res, next) => {
                 old_belief:old_belief_id ( id, belief_statement, topic_tag, confidence_score, category ),
                 new_belief:new_belief_id ( id, belief_statement, topic_tag, confidence_score, category )
             `)
+            .eq('user_id', req.user.uid)
             .order('created_at', { ascending: false });
 
         // Count shifts by topic
@@ -72,11 +75,12 @@ router.get('/evolution', async (_req, res, next) => {
 
 // ─── GET /api/beliefs/all ───────────────────────────────────────────────────
 // Returns all beliefs, newest first.
-router.get('/all', async (_req, res, next) => {
+router.get('/all', async (req, res, next) => {
     try {
         const { data, error } = await supabase
             .from('beliefs')
             .select('*')
+            .eq('user_id', req.user.uid)
             .order('created_at', { ascending: false })
             .limit(100);
 

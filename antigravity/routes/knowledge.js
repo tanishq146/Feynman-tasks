@@ -28,6 +28,7 @@ const router = Router();
 
 router.post('/ingest', async (req, res, next) => {
     try {
+        const userId = req.user.uid;
         const { content } = req.body;
 
         if (!content || typeof content !== 'string' || content.trim().length === 0) {
@@ -50,6 +51,7 @@ router.post('/ingest', async (req, res, next) => {
 
         const node = {
             id: nodeId,
+            user_id: userId,
             title: analysis.title,
             raw_content: rawContent,
             summary: analysis.summary,
@@ -91,6 +93,7 @@ router.post('/ingest', async (req, res, next) => {
                 const { data: existingNodes } = await supabase
                     .from('knowledge_nodes')
                     .select('id, title, summary, tags')
+                    .eq('user_id', userId)
                     .neq('id', nodeId);
 
                 // ── Detect connections ──
@@ -106,6 +109,7 @@ router.post('/ingest', async (req, res, next) => {
 
                         const edge = {
                             id: uuid(),
+                            user_id: userId,
                             source_node_id: nodeId,
                             target_node_id: targetNode.id,
                             connection_type: conn.connection_type,
@@ -151,7 +155,8 @@ router.post('/ingest', async (req, res, next) => {
                 // Get user goals
                 const { data: goals } = await supabase
                     .from('user_goals')
-                    .select('goal_text');
+                    .select('goal_text')
+                    .eq('user_id', userId);
 
                 // ── Generate Feynman analysis ──
                 console.log('🎓 Generating Feynman analysis...');
@@ -189,7 +194,7 @@ router.post('/ingest', async (req, res, next) => {
                 console.log(`🎓 Feynman analysis + extras complete for "${savedNode.title}"`);
 
                 // ── Belief extraction & evolution detection ──
-                processBeliefForNode(savedNode).catch(err =>
+                processBeliefForNode(savedNode, userId).catch(err =>
                     console.error('🧠 Belief processing failed:', err.message)
                 );
 
@@ -214,6 +219,7 @@ router.get('/all', async (req, res, next) => {
         const { data, error } = await supabase
             .from('knowledge_nodes')
             .select('*')
+            .eq('user_id', req.user.uid)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -236,7 +242,8 @@ router.get('/fading', async (req, res, next) => {
     try {
         const { data, error } = await supabase
             .from('knowledge_nodes')
-            .select('*');
+            .select('*')
+            .eq('user_id', req.user.uid);
 
         if (error) throw error;
 
@@ -263,6 +270,7 @@ router.get('/:id', async (req, res, next) => {
             .from('knowledge_nodes')
             .select('*')
             .eq('id', req.params.id)
+            .eq('user_id', req.user.uid)
             .single();
 
         if (error) {
@@ -391,7 +399,8 @@ router.delete('/:id', async (req, res, next) => {
         const { error } = await supabase
             .from('knowledge_nodes')
             .delete()
-            .eq('id', req.params.id);
+            .eq('id', req.params.id)
+            .eq('user_id', req.user.uid);
 
         if (error) throw error;
 
