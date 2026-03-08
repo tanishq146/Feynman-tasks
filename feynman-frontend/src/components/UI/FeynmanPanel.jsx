@@ -139,6 +139,7 @@ export default function FeynmanPanel() {
 
     const [connections, setConnections] = useState([]);
     const [reviewing, setReviewing] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     // ── Extras state ──
     const [extras, setExtras] = useState(null);
@@ -176,7 +177,7 @@ export default function FeynmanPanel() {
             }
         }
         // Reset state on node change  
-        setChallengeAnswer(''); setChallengeResult(null); setTeachExplanation(''); setTeachResult(null); setMomentCount(1);
+        setChallengeAnswer(''); setChallengeResult(null); setTeachExplanation(''); setTeachResult(null); setMomentCount(1); setIsExpanded(false);
     }, [selectedNode?.id, selectedNode?.feynman]);
 
     const handleReview = async () => {
@@ -248,35 +249,64 @@ export default function FeynmanPanel() {
             {isOpen && selectedNode && (
                 <>
                     {/* Backdrop */}
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={clearSelection} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 55 }} />
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { if (isExpanded) setIsExpanded(false); else clearSelection(); }} style={{ position: 'fixed', inset: 0, background: isExpanded ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)', zIndex: 55, transition: 'background 0.3s' }} />
 
                     {/* Panel */}
                     <motion.div
                         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
                         transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
-                        style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: '60vh', maxHeight: '700px', zIndex: 60, background: 'rgba(2,8,20,0.96)', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)', borderTop: '1px solid rgba(0,212,255,0.12)', borderRadius: '20px 20px 0 0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+                        style={{ position: 'fixed', bottom: 0, left: isExpanded ? 0 : 0, right: isExpanded ? 0 : 0, height: isExpanded ? '100vh' : '60vh', maxHeight: isExpanded ? '100vh' : '700px', zIndex: 60, background: 'rgba(2,8,20,0.98)', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)', borderTop: isExpanded ? 'none' : '1px solid rgba(0,212,255,0.12)', borderRadius: isExpanded ? '0' : '20px 20px 0 0', overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'height 0.4s cubic-bezier(0.4,0,0.2,1), max-height 0.4s cubic-bezier(0.4,0,0.2,1), border-radius 0.3s ease, border-top 0.3s ease' }}
                     >
                         {/* Header */}
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '24px 28px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: isExpanded ? '28px 36px 18px' : '24px 28px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', flexShrink: 0, transition: 'padding 0.3s ease' }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                                    <span style={{ color: '#00d4ff', fontSize: '14px' }}>✦</span>
-                                    <h2 style={{ fontFamily: "'SF Pro Display', -apple-system, sans-serif", fontSize: '18px', fontWeight: 700, color: '#e8f4fd', letterSpacing: '1px', textTransform: 'uppercase', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span style={{ color: '#00d4ff', fontSize: isExpanded ? '18px' : '14px', transition: 'font-size 0.3s ease' }}>✦</span>
+                                    <h2 style={{ fontFamily: "'SF Pro Display', -apple-system, sans-serif", fontSize: isExpanded ? '24px' : '18px', fontWeight: 700, color: '#e8f4fd', letterSpacing: '1px', textTransform: 'uppercase', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: isExpanded ? 'normal' : 'nowrap', transition: 'font-size 0.3s ease' }}>
                                         {selectedNode.title}
                                     </h2>
                                     {extras?.feynman_certified && <span style={{ fontSize: '12px', color: '#00ff88', background: 'rgba(0,255,136,0.1)', padding: '2px 8px', borderRadius: '8px', border: '1px solid rgba(0,255,136,0.2)', fontFamily: "'SF Pro Text', sans-serif", fontWeight: 600, letterSpacing: '0.5px' }}>✓ Certified</span>}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                                    <div style={{ flex: 1, maxWidth: '200px' }}><StrengthBar strength={selectedNode.current_strength} status={selectedNode.status} /></div>
+                                    <div style={{ flex: 1, maxWidth: isExpanded ? '320px' : '200px', transition: 'max-width 0.3s ease' }}><StrengthBar strength={selectedNode.current_strength} status={selectedNode.status} /></div>
                                     <span style={{ fontFamily: "'SF Pro Text', sans-serif", fontSize: '11px', color: '#4a9eba', letterSpacing: '0.5px', flexShrink: 0 }}>{timeAgo(selectedNode.created_at)}</span>
                                     {selectedNode.brain_region && <span style={{ fontFamily: "'SF Pro Text', sans-serif", fontSize: '10px', color: '#7c3aed', letterSpacing: '0.5px', padding: '3px 8px', borderRadius: '8px', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)', flexShrink: 0 }}>{selectedNode.brain_region.replace('_', ' ')}</span>}
                                 </div>
                             </div>
-                            <button onClick={clearSelection} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#4a9eba', fontSize: '16px', flexShrink: 0, marginLeft: '16px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#e8f4fd'; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#4a9eba'; }}>✕</button>
+                            <div style={{ display: 'flex', gap: '8px', marginLeft: '16px', flexShrink: 0 }}>
+                                {/* Expand / Collapse Button */}
+                                <button
+                                    onClick={() => setIsExpanded(!isExpanded)}
+                                    title={isExpanded ? 'Collapse panel' : 'Expand to fullscreen'}
+                                    style={{ background: isExpanded ? 'rgba(0,212,255,0.08)' : 'rgba(255,255,255,0.04)', border: `1px solid ${isExpanded ? 'rgba(0,212,255,0.2)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: isExpanded ? '#00d4ff' : '#4a9eba', fontSize: '14px', transition: 'all 0.25s ease' }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = isExpanded ? 'rgba(0,212,255,0.15)' : 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#e8f4fd'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = isExpanded ? 'rgba(0,212,255,0.08)' : 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = isExpanded ? '#00d4ff' : '#4a9eba'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                >
+                                    {isExpanded ? (
+                                        /* Collapse icon — arrows pointing inward */
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <polyline points="4,1 4,4 1,4" />
+                                            <polyline points="12,1 12,4 15,4" />
+                                            <polyline points="4,15 4,12 1,12" />
+                                            <polyline points="12,15 12,12 15,12" />
+                                        </svg>
+                                    ) : (
+                                        /* Expand icon — arrows pointing outward */
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <polyline points="1,4 1,1 4,1" />
+                                            <polyline points="15,4 15,1 12,1" />
+                                            <polyline points="1,12 1,15 4,15" />
+                                            <polyline points="15,12 15,15 12,15" />
+                                        </svg>
+                                    )}
+                                </button>
+                                {/* Close Button */}
+                                <button onClick={() => { setIsExpanded(false); clearSelection(); }} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#4a9eba', fontSize: '16px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#e8f4fd'; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#4a9eba'; }}>✕</button>
+                            </div>
                         </div>
 
                         {/* Content */}
-                        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px 28px' }}>
+                        <div style={{ flex: 1, overflowY: 'auto', padding: isExpanded ? '28px 36px 36px' : '20px 28px 28px', transition: 'padding 0.3s ease' }}>
                             {feynman ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 

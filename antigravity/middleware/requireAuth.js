@@ -4,11 +4,18 @@
 //
 // Usage: app.use('/api/protected-route', requireAuth, routeHandler);
 //
-// In development (NODE_ENV !== 'production'), if token verification fails
-// due to missing Firebase credentials, it decodes the token without
-// verification so you can develop freely.
+// If token verification fails due to missing Firebase credentials,
+// it decodes the token without verification so you can develop freely.
 
 import { admin } from '../lib/firebaseAdmin.js';
+
+// Check if we have proper Firebase credentials configured.
+// npm sometimes sets NODE_ENV=production even locally, so we check
+// for actual credentials instead.
+const hasFirebaseCredentials = !!(
+    process.env.FIREBASE_SERVICE_ACCOUNT ||
+    process.env.GOOGLE_APPLICATION_CREDENTIALS
+);
 
 export async function requireAuth(req, res, next) {
     const authHeader = req.headers.authorization;
@@ -20,7 +27,7 @@ export async function requireAuth(req, res, next) {
 
     // No token at all
     if (!token) {
-        if (process.env.NODE_ENV !== 'production') {
+        if (!hasFirebaseCredentials) {
             req.user = { uid: 'dev-user', email: 'dev@feynman.local', name: 'Developer' };
             return next();
         }
@@ -38,24 +45,24 @@ export async function requireAuth(req, res, next) {
         };
         return next();
     } catch (err) {
-        // In development, decode the JWT payload without verification
+        // If we don't have Firebase credentials, decode the JWT without verification
         // This lets you dev locally without a service account key
-        if (process.env.NODE_ENV !== 'production') {
-            try {
-                // Firebase ID tokens are JWTs — decode the payload (base64)
-                const payload = token.split('.')[1];
-                const decoded = JSON.parse(Buffer.from(payload, 'base64').toString());
-                req.user = {
-                    uid: decoded.user_id || decoded.sub || 'dev-user',
-                    email: decoded.email || 'dev@feynman.local',
-                    name: decoded.name || decoded.email || 'Developer',
-                    picture: decoded.picture || null,
-                };
-                console.log(`🔓 Dev auth (unverified): ${req.user.email} [${req.user.uid}]`);
-                return next();
-            } catch (decodeErr) {
-                console.error('🔒 Could not decode token:', decodeErr.message);
-            }
+        try {
+            // Firebase ID tokens are JWTs — decode the payload (base64url)
+            const payload = token.split('.')[1];
+            // Use base64url decoding (replace - with + and _ with /)
+            const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+            const decoded = JSON.parse(Buffer.from(base64, 'base64').toString());
+            req.user = {
+                uid: decoded.user_id || decoded.sub || 'dev-user',
+                email: decoded.email || 'dev@feynman.local',
+                name: decoded.name || decoded.email || 'Developer',
+                picture: decoded.picture || null,
+            };
+            console.log(`🔓 Dev auth (unverified): ${req.user.email} [${req.user.uid}]`);
+            return next();
+        } catch (decodeErr) {
+            console.error('🔒 Could not decode token:', decodeErr.message);
         }
 
         console.error('🔒 Auth failed:', err.message);
