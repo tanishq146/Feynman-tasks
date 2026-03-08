@@ -30,6 +30,7 @@ import goalRoutes from './routes/goals.js';
 import aiRoutes from './routes/ai.js';
 import chatRoutes from './routes/chat.js';
 import beliefRoutes from './routes/beliefs.js';
+import studyRoutes from './routes/study.js';
 
 
 // ─── Express App ────────────────────────────────────────────────────────────
@@ -77,6 +78,7 @@ app.use('/api/goals', requireAuth, goalRoutes);
 app.use('/api/ai', requireAuth, aiRoutes);
 app.use('/api/chat', requireAuth, chatRoutes);
 app.use('/api/beliefs', requireAuth, beliefRoutes);
+app.use('/api/study', requireAuth, studyRoutes);
 
 
 // ─── 404 Catch-all ──────────────────────────────────────────────────────────

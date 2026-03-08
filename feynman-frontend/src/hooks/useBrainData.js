@@ -85,3 +85,27 @@ export async function fillKnowledgeGap(content) {
     const res = await api.post('/api/knowledge/ingest', { content });
     return res.data;
 }
+
+// ─── Study Mode API ────────────────────────────────────────────────────────
+
+export async function fetchFadingNodes() {
+    const res = await api.get('/api/study/fading');
+    return res.data;
+}
+
+export async function generateStudyQuestions(nodeIds, count = 5) {
+    const res = await api.post('/api/study/generate-questions', { nodeIds, count });
+    return res.data;
+}
+
+export async function gradeStudyAnswer({ nodeId, question, userAnswer, keyConcepts, idealPoints, difficulty }) {
+    const res = await api.post('/api/study/grade-answer', {
+        nodeId, question, userAnswer, keyConcepts, idealPoints, difficulty,
+    });
+    return res.data;
+}
+
+export async function getSessionSummary(results) {
+    const res = await api.post('/api/study/session-summary', { results });
+    return res.data;
+}
