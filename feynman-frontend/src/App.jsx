@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
 import BrainScene from './components/Brain/BrainScene';
 import InputBar from './components/UI/InputBar';
 import TopBar from './components/UI/TopBar';
@@ -8,13 +7,13 @@ import ChatPanel from './components/UI/ChatPanel';
 import BeliefEvolutionPanel from './components/UI/BeliefEvolutionPanel';
 import StudyMode from './components/UI/StudyMode';
 import FadingWarning from './components/UI/FadingWarning';
+import CommandMenu from './components/UI/CommandMenu';
 import Toast from './components/UI/Toast';
 import AuthScreen from './components/UI/AuthScreen';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useBrainData } from './hooks/useBrainData';
 import { useSocket } from './hooks/useSocket';
 import { useDecayTicker } from './hooks/useDecayTicker';
-import useBrainStore from './store/brainStore';
 
 function FeynmanApp() {
   // Initialize data fetching and WebSocket connection
@@ -24,11 +23,14 @@ function FeynmanApp() {
   // Real-time decay: recalculates all node strengths every 10 seconds
   useDecayTicker(10000);
 
+  // Panel states — all managed here, toggled via CommandMenu
+  const [chatOpen, setChatOpen] = useState(false);
   const [beliefPanelOpen, setBeliefPanelOpen] = useState(false);
   const [studyModeOpen, setStudyModeOpen] = useState(false);
   const [studyPrefilteredIds, setStudyPrefilteredIds] = useState(null);
-  const nodes = useBrainStore(s => s.nodes);
-  const fadingCount = nodes.filter(n => (n.current_strength || 100) < 60).length;
+
+  // Track which panel is currently active for the menu indicator
+  const activePanel = chatOpen ? 'chat' : beliefPanelOpen ? 'beliefs' : studyModeOpen ? 'study' : null;
 
   const handleStudyFromWarning = useCallback((nodeIds) => {
     setStudyPrefilteredIds(nodeIds);
@@ -39,6 +41,31 @@ function FeynmanApp() {
     setStudyModeOpen(false);
     setStudyPrefilteredIds(null);
   }, []);
+
+  // Handle menu selection — toggle the selected panel
+  const handleMenuSelect = useCallback((id) => {
+    if (id === 'chat') {
+      setChatOpen(prev => !prev);
+      // Close other panels when opening chat
+      if (!chatOpen) {
+        setBeliefPanelOpen(false);
+        setStudyModeOpen(false);
+      }
+    } else if (id === 'beliefs') {
+      setBeliefPanelOpen(prev => !prev);
+      if (!beliefPanelOpen) {
+        setChatOpen(false);
+        setStudyModeOpen(false);
+      }
+    } else if (id === 'study') {
+      setStudyPrefilteredIds(null);
+      setStudyModeOpen(prev => !prev);
+      if (!studyModeOpen) {
+        setChatOpen(false);
+        setBeliefPanelOpen(false);
+      }
+    }
+  }, [chatOpen, beliefPanelOpen, studyModeOpen]);
 
   return (
     <div
@@ -57,7 +84,7 @@ function FeynmanApp() {
       <TopBar />
       <InputBar />
       <FeynmanPanel />
-      <ChatPanel />
+      <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />
       <BeliefEvolutionPanel
         isOpen={beliefPanelOpen}
         onClose={() => setBeliefPanelOpen(false)}
@@ -66,96 +93,8 @@ function FeynmanApp() {
       {/* Fading Warning Banner */}
       <FadingWarning onStudyNow={handleStudyFromWarning} />
 
-      {/* Belief Evolution Toggle Button — draggable */}
-      <motion.button
-        onClick={() => setBeliefPanelOpen(!beliefPanelOpen)}
-        drag
-        dragMomentum={false}
-        dragElastic={0.1}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        title={beliefPanelOpen ? 'Close Beliefs' : 'Belief Evolution'}
-        style={{
-          position: 'fixed',
-          left: '20px',
-          bottom: '156px',
-          zIndex: 60,
-          width: '44px',
-          height: '44px',
-          borderRadius: '12px',
-          background: beliefPanelOpen
-            ? 'rgba(0, 212, 255, 0.12)'
-            : 'rgba(2, 8, 20, 0.9)',
-          backdropFilter: 'blur(20px)',
-          border: `1px solid ${beliefPanelOpen
-            ? 'rgba(0, 212, 255, 0.3)'
-            : 'rgba(0, 212, 255, 0.2)'}`,
-          color: '#00d4ff',
-          fontSize: '18px',
-          cursor: 'grab',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-          touchAction: 'none',
-        }}
-      >
-        {beliefPanelOpen ? '✕' : '🧬'}
-      </motion.button>
-
-      {/* Study Mode Toggle Button — draggable */}
-      <motion.button
-        onClick={() => { setStudyPrefilteredIds(null); setStudyModeOpen(true); }}
-        drag
-        dragMomentum={false}
-        dragElastic={0.1}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        title="Study Mode"
-        style={{
-          position: 'fixed',
-          left: '20px',
-          bottom: '100px',
-          zIndex: 60,
-          width: '44px',
-          height: '44px',
-          borderRadius: '12px',
-          background: studyModeOpen
-            ? 'rgba(124, 58, 237, 0.15)'
-            : 'rgba(2, 8, 20, 0.9)',
-          backdropFilter: 'blur(20px)',
-          border: `1px solid ${studyModeOpen
-            ? 'rgba(124, 58, 237, 0.3)'
-            : 'rgba(124, 58, 237, 0.2)'}`,
-          color: '#7c3aed',
-          fontSize: '18px',
-          cursor: 'grab',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-          touchAction: 'none',
-        }}
-      >
-        📚
-        {/* Red notification dot for fading nodes */}
-        {fadingCount > 0 && (
-          <motion.div
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{ repeat: Infinity, duration: 2 }}
-            style={{
-              position: 'absolute', top: '-3px', right: '-3px',
-              width: '14px', height: '14px', borderRadius: '50%',
-              background: '#ff4466', border: '2px solid #020408',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '8px', fontWeight: 700, color: '#fff',
-              fontFamily: "'SF Pro Text', sans-serif",
-            }}
-          >
-            {fadingCount > 9 ? '9+' : fadingCount}
-          </motion.div>
-        )}
-      </motion.button>
+      {/* ✦ Command Menu — single access point for all tools */}
+      <CommandMenu onSelect={handleMenuSelect} activePanel={activePanel} />
 
       {/* Study Mode Overlay */}
       <StudyMode

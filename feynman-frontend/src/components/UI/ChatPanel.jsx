@@ -6,8 +6,7 @@ import api from '../../lib/api';
 const sfDisplay = "'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
 const sfText = "'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
 
-export default function ChatPanel() {
-    const [isOpen, setIsOpen] = useState(false);
+export default function ChatPanel({ isOpen = false, onClose }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const panelWidth = isExpanded ? 600 : 360;
     const [messages, setMessages] = useState([
@@ -294,39 +293,6 @@ export default function ChatPanel() {
 
     return (
         <>
-            {/* Toggle Button — draggable */}
-            <motion.button
-                onClick={() => setIsOpen(!isOpen)}
-                drag
-                dragMomentum={false}
-                dragElastic={0.1}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                style={{
-                    position: 'fixed',
-                    left: '20px',
-                    top: '50%',
-                    zIndex: 60,
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '12px',
-                    background: 'rgba(2, 8, 20, 0.9)',
-                    backdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(0, 212, 255, 0.2)',
-                    color: '#00d4ff',
-                    fontSize: '18px',
-                    cursor: 'grab',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-                    touchAction: 'none',
-                }}
-                title={isOpen ? 'Close Chat' : 'Chat with Feynman'}
-            >
-                {isOpen ? '✕' : '💬'}
-            </motion.button>
-
             {/* Chat Panel */}
             <AnimatePresence>
                 {isOpen && (
