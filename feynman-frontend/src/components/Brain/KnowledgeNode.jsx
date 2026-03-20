@@ -58,6 +58,7 @@ export default function KnowledgeNode({ node, isNew = false }) {
     const highlightFading = useBrainStore((s) => s.highlightFading);
     const updateNode = useBrainStore((s) => s.updateNode);
     const setDraggingNode = useBrainStore((s) => s.setDraggingNode);
+    const startDive = useBrainStore((s) => s.startDive);
 
     const { camera, gl, raycaster, size } = useThree();
 
@@ -97,6 +98,11 @@ export default function KnowledgeNode({ node, isNew = false }) {
     const didDrag = useRef(false);
     const isPointerDown = useRef(false);
     const DRAG_THRESHOLD = 5; // pixels before drag activates
+
+    // Double-click tracking
+    const lastClickTime = useRef(0);
+    const clickTimer = useRef(null);
+    const DOUBLE_CLICK_DELAY = 300; // ms
 
     // Clamp position to inside the orb
     const clampToOrb = useCallback((vec) => {
@@ -205,11 +211,25 @@ export default function KnowledgeNode({ node, isNew = false }) {
             });
         }
 
-        // If pointer didn't move much, treat as a click → open panel
+        // If pointer didn't move much, treat as a click
         if (!wasDragging) {
-            selectNode(node.id);
+            const now = Date.now();
+            const timeSinceLastClick = now - lastClickTime.current;
+
+            if (timeSinceLastClick < DOUBLE_CLICK_DELAY) {
+                // Double-click → dive into node
+                clearTimeout(clickTimer.current);
+                lastClickTime.current = 0;
+                startDive(node);
+            } else {
+                // Single click → open panel (delayed to check for double)
+                lastClickTime.current = now;
+                clickTimer.current = setTimeout(() => {
+                    selectNode(node.id);
+                }, DOUBLE_CLICK_DELAY);
+            }
         }
-    }, [dragging, gl, node.id, updateNode, selectNode, setDraggingNode]);
+    }, [dragging, gl, node, updateNode, selectNode, setDraggingNode, startDive]);
 
     const handlePointerOver = (e) => {
         e.stopPropagation();

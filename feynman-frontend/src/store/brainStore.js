@@ -16,6 +16,14 @@ const useBrainStore = create((set, get) => ({
     isIngesting: false,
     isDraggingNode: false,
 
+    // ─── Connection Thread Panel ──────────────────────
+    selectedEdge: null,
+    isConnectionPanelOpen: false,
+
+    // ─── Node Dive (double-click to enter) ────────────
+    diveNode: null,
+    isDiving: false,
+
     // ─── Toasts ───────────────────────────────────────────
     toasts: [],
 
@@ -49,6 +57,42 @@ const useBrainStore = create((set, get) => ({
         }),
 
     setHoveredNodeId: (id) => set({ hoveredNodeId: id }),
+
+    selectEdge: (edge) => {
+        set({
+            selectedEdge: edge,
+            isConnectionPanelOpen: !!edge,
+            // Close node panel when opening edge panel
+            selectedNodeId: null,
+            selectedNode: null,
+            isFeynmanPanelOpen: false,
+        });
+    },
+
+    clearEdge: () =>
+        set({
+            selectedEdge: null,
+            isConnectionPanelOpen: false,
+        }),
+
+    startDive: (node) => {
+        set({
+            diveNode: node,
+            isDiving: true,
+            // Close everything else
+            selectedNodeId: null,
+            selectedNode: null,
+            isFeynmanPanelOpen: false,
+            selectedEdge: null,
+            isConnectionPanelOpen: false,
+        });
+    },
+
+    exitDive: () =>
+        set({
+            diveNode: null,
+            isDiving: false,
+        }),
 
     toggleHighlightFading: () =>
         set((s) => ({ highlightFading: !s.highlightFading })),

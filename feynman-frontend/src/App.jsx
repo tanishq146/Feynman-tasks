@@ -8,12 +8,15 @@ import BeliefEvolutionPanel from './components/UI/BeliefEvolutionPanel';
 import StudyMode from './components/UI/StudyMode';
 import FadingWarning from './components/UI/FadingWarning';
 import CommandMenu from './components/UI/CommandMenu';
+import ConnectionPanel from './components/UI/ConnectionPanel';
+import NodeDive from './components/UI/NodeDive';
 import Toast from './components/UI/Toast';
 import AuthScreen from './components/UI/AuthScreen';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useBrainData } from './hooks/useBrainData';
 import { useSocket } from './hooks/useSocket';
 import { useDecayTicker } from './hooks/useDecayTicker';
+import useBrainStore from './store/brainStore';
 
 function FeynmanApp() {
   // Initialize data fetching and WebSocket connection
@@ -22,6 +25,10 @@ function FeynmanApp() {
 
   // Real-time decay: recalculates all node strengths every 10 seconds
   useDecayTicker(10000);
+
+  // Connection panel state from store
+  const isConnectionPanelOpen = useBrainStore((s) => s.isConnectionPanelOpen);
+  const clearEdge = useBrainStore((s) => s.clearEdge);
 
   // Panel states — all managed here, toggled via CommandMenu
   const [chatOpen, setChatOpen] = useState(false);
@@ -90,6 +97,23 @@ function FeynmanApp() {
         onClose={() => setBeliefPanelOpen(false)}
       />
 
+      {/* Connection Thread Panel */}
+      {isConnectionPanelOpen && (
+        <div
+          onClick={clearEdge}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 199,
+            background: 'rgba(0, 0, 0, 0.5)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        />
+      )}
+      <ConnectionPanel />
+
       {/* Fading Warning Banner */}
       <FadingWarning onStudyNow={handleStudyFromWarning} />
 
@@ -104,6 +128,16 @@ function FeynmanApp() {
       />
 
       <Toast />
+
+      {/* Node Dive — full screen, above everything */}
+      <NodeDive />
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
