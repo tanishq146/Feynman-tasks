@@ -202,7 +202,7 @@ export default function LobeDiveTransition() {
                     filter: 'blur(25px)',
                 }} />
 
-                {/* Brain icon */}
+                {/* Neural icon — SVG, no emoji */}
                 <div style={{
                     width: '44px', height: '44px',
                     margin: '0 auto 14px',
@@ -211,10 +211,21 @@ export default function LobeDiveTransition() {
                     border: `1.5px solid ${c}50`,
                     boxShadow: `0 0 30px ${c}40`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '18px',
                     animation: 'lobeIconPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 600ms both',
                 }}>
-                    🧠
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <circle cx="10" cy="10" r="3" fill={c} opacity="0.9"/>
+                        <circle cx="10" cy="10" r="5.5" stroke={c} strokeWidth="0.8" opacity="0.5"/>
+                        <circle cx="10" cy="10" r="8" stroke={c} strokeWidth="0.5" opacity="0.25" strokeDasharray="2 3"/>
+                        <circle cx="4" cy="6" r="1.2" fill={a} opacity="0.7"/>
+                        <circle cx="16" cy="7" r="1" fill={a} opacity="0.6"/>
+                        <circle cx="6" cy="16" r="1.1" fill={a} opacity="0.5"/>
+                        <circle cx="15" cy="14" r="0.9" fill={a} opacity="0.6"/>
+                        <line x1="10" y1="10" x2="4" y2="6" stroke={c} strokeWidth="0.5" opacity="0.3"/>
+                        <line x1="10" y1="10" x2="16" y2="7" stroke={c} strokeWidth="0.5" opacity="0.3"/>
+                        <line x1="10" y1="10" x2="6" y2="16" stroke={c} strokeWidth="0.5" opacity="0.3"/>
+                        <line x1="10" y1="10" x2="15" y2="14" stroke={c} strokeWidth="0.5" opacity="0.3"/>
+                    </svg>
                 </div>
 
                 {/* Label */}
