@@ -15,6 +15,9 @@ export const config = {
   // Groq (Llama 3.3 70B)
   GROQ_API_KEY: clean(process.env.GROQ_API_KEY),
 
+  // Anthropic (Claude) — for Cockpit Mode streaming
+  ANTHROPIC_API_KEY: clean(process.env.ANTHROPIC_API_KEY),
+
   // Server
   PORT: parseInt(process.env.PORT || '3001', 10),
   NODE_ENV: (process.env.NODE_ENV || 'development').trim(),

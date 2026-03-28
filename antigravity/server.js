@@ -31,6 +31,7 @@ import aiRoutes from './routes/ai.js';
 import chatRoutes from './routes/chat.js';
 import beliefRoutes from './routes/beliefs.js';
 import studyRoutes from './routes/study.js';
+import notesRoutes from './routes/notes.js';
 
 
 // ─── Express App ────────────────────────────────────────────────────────────
@@ -43,7 +44,7 @@ const server = createServer(app);
 
 app.use(cors({
     origin: '*', // In production, restrict to your frontend domain
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
@@ -79,6 +80,7 @@ app.use('/api/ai', requireAuth, aiRoutes);
 app.use('/api/chat', requireAuth, chatRoutes);
 app.use('/api/beliefs', requireAuth, beliefRoutes);
 app.use('/api/study', requireAuth, studyRoutes);
+app.use('/api/notes', requireAuth, notesRoutes);
 
 
 // ─── 404 Catch-all ──────────────────────────────────────────────────────────

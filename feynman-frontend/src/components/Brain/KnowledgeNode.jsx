@@ -3,151 +3,87 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import useBrainStore from '../../store/brainStore';
+import { LOBE_CONFIG } from './BrainMesh';
 
-const ORB_RADIUS = 4.5; // Must stay inside the orb
+const ORB_RADIUS = 1.8; // Very tight — nothing leaves the brain
+
+function getRegionColor(region) {
+    if (!region) return '#00d4ff';
+    for (const lobe of Object.values(LOBE_CONFIG)) {
+        if (lobe.regions.includes(region)) return lobe.color;
+    }
+    return '#00d4ff';
+}
 
 const STATUS_CONFIG = {
-    healthy: {
-        color: '#00d4ff',       // Cyan glow
-        emissive: '#00d4ff',
-        emissiveIntensity: 1.2,
-        radius: 0.18,
-        lightIntensity: 1.5,
-        lightDistance: 3.5,
-        glowLayers: 3,
-    },
-    fading: {
-        color: '#ff8c00',       // Warm orange
-        emissive: '#ff8c00',
-        emissiveIntensity: 0.9,
-        radius: 0.14,
-        lightIntensity: 1.0,
-        lightDistance: 3,
-        glowLayers: 2,
-    },
-    critical: {
-        color: '#ff2d55',
-        emissive: '#ff2d55',
-        emissiveIntensity: 1.5,
-        radius: 0.12,
-        lightIntensity: 1.2,
-        lightDistance: 2.5,
-        glowLayers: 3,
-    },
-    forgotten: {
-        color: '#556688',
-        emissive: '#334466',
-        emissiveIntensity: 0.3,
-        radius: 0.10,
-        lightIntensity: 0.4,
-        lightDistance: 1.5,
-        glowLayers: 1,
-    },
+    healthy:   { emissiveIntensity: 1.0, radius: 0.08 },
+    fading:    { emissiveIntensity: 0.7, radius: 0.07, forceColor: '#ff8c00' },
+    critical:  { emissiveIntensity: 1.5, radius: 0.065, forceColor: '#ff2d55' },
+    forgotten: { emissiveIntensity: 0.3, radius: 0.05, forceColor: '#556688' },
 };
 
 export default function KnowledgeNode({ node, isNew = false }) {
     const meshRef = useRef();
     const groupRef = useRef();
-    const lightRef = useRef();
-    const glowRefs = useRef([]);
     const [hovered, setHovered] = useState(false);
     const [dragging, setDragging] = useState(false);
     const selectNode = useBrainStore((s) => s.selectNode);
+    const startDive = useBrainStore((s) => s.startDive);
+    const nodes = useBrainStore((s) => s.nodes);
     const hoveredNodeId = useBrainStore((s) => s.hoveredNodeId);
     const setHoveredNodeId = useBrainStore((s) => s.setHoveredNodeId);
-    const highlightFading = useBrainStore((s) => s.highlightFading);
     const updateNode = useBrainStore((s) => s.updateNode);
     const setDraggingNode = useBrainStore((s) => s.setDraggingNode);
-    const startDive = useBrainStore((s) => s.startDive);
 
     const { camera, gl, raycaster, size } = useThree();
 
-    const config = STATUS_CONFIG[node.status] || STATUS_CONFIG.healthy;
+    const cfg = STATUS_CONFIG[node.status] || STATUS_CONFIG.healthy;
+    const nodeColor = cfg.forceColor || getRegionColor(node.brain_region);
     const coords = node.coordinates || { x: 0, y: 0, z: 0 };
+    const isActive = hovered || hoveredNodeId === node.id;
 
-    const isHighlighted = highlightFading && (node.status === 'fading' || node.status === 'critical');
-    const isExternalHover = hoveredNodeId === node.id;
-    const isActive = hovered || isExternalHover;
+    // Clamp hard — nothing leaves the brain
+    const clampedCoords = useMemo(() => {
+        const v = new THREE.Vector3(coords.x, coords.y, coords.z);
+        if (v.length() > ORB_RADIUS) v.setLength(ORB_RADIUS * 0.85);
+        return { x: v.x, y: v.y, z: v.z };
+    }, [coords.x, coords.y, coords.z]);
 
-    // Current position (mutable for drag + float)
-    const posRef = useRef(new THREE.Vector3(coords.x, coords.y, coords.z));
+    const posRef = useRef(new THREE.Vector3(clampedCoords.x, clampedCoords.y, clampedCoords.z));
 
-    // Unique seed for floating animation so each node moves differently
     const seed = useMemo(() => ({
-        xPhase: Math.random() * Math.PI * 2,
-        yPhase: Math.random() * Math.PI * 2,
-        zPhase: Math.random() * Math.PI * 2,
-        xSpeed: 0.08 + Math.random() * 0.06,
-        ySpeed: 0.06 + Math.random() * 0.05,
-        zSpeed: 0.07 + Math.random() * 0.05,
-        xAmp: 0.02 + Math.random() * 0.03,
-        yAmp: 0.02 + Math.random() * 0.03,
-        zAmp: 0.015 + Math.random() * 0.025,
+        xP: Math.random() * Math.PI * 2,
+        yP: Math.random() * Math.PI * 2,
+        zP: Math.random() * Math.PI * 2,
+        sp: 0.15 + Math.random() * 0.1,
+        amp: 0.015 + Math.random() * 0.02,
     }), []);
 
-    // Drag offset reference
+    // Drag state
     const dragPlane = useRef(new THREE.Plane());
     const dragOffset = useRef(new THREE.Vector3());
     const intersection = useRef(new THREE.Vector3());
-
-    // Spawn animation
-    const spawnRef = useRef({ scale: isNew ? 0 : 1, done: !isNew });
-
-    // Track pointer start for click vs drag detection
     const pointerStart = useRef({ x: 0, y: 0 });
     const didDrag = useRef(false);
     const isPointerDown = useRef(false);
-    const DRAG_THRESHOLD = 5; // pixels before drag activates
 
-    // Double-click tracking
-    const lastClickTime = useRef(0);
-    const clickTimer = useRef(null);
-    const DOUBLE_CLICK_DELAY = 300; // ms
-
-    // Clamp position to inside the orb
     const clampToOrb = useCallback((vec) => {
-        const dist = vec.length();
-        if (dist > ORB_RADIUS) {
-            vec.multiplyScalar(ORB_RADIUS / dist);
-        }
+        if (vec.length() > ORB_RADIUS) vec.setLength(ORB_RADIUS);
         return vec;
     }, []);
 
-    // ─── Glow layer configs ────────────────────────────────────
-    const glowLayers = useMemo(() => {
-        const layers = [];
-        for (let i = 0; i < config.glowLayers; i++) {
-            layers.push({
-                scale: 1.6 + i * 0.8,
-                opacity: 0.12 - i * 0.03,
-            });
-        }
-        return layers;
-    }, [config.glowLayers]);
-
-    // ─── Drag handlers ──────────────────────────────────────
     const handlePointerDown = useCallback((e) => {
         e.stopPropagation();
         e.target.setPointerCapture(e.pointerId);
-
-        // Record start position — don't start dragging yet
         pointerStart.current = { x: e.clientX, y: e.clientY };
         didDrag.current = false;
         isPointerDown.current = true;
 
-        // Pre-compute drag plane and offset
         const cameraDir = new THREE.Vector3();
         camera.getWorldDirection(cameraDir);
-        dragPlane.current.setFromNormalAndCoplanarPoint(
-            cameraDir.negate(),
-            posRef.current
-        );
-
+        dragPlane.current.setFromNormalAndCoplanarPoint(cameraDir.negate(), posRef.current);
         raycaster.setFromCamera(
-            new THREE.Vector2(
-                (e.clientX / size.width) * 2 - 1,
-                -(e.clientY / size.height) * 2 + 1
-            ),
+            new THREE.Vector2((e.clientX / size.width) * 2 - 1, -(e.clientY / size.height) * 2 + 1),
             camera
         );
         raycaster.ray.intersectPlane(dragPlane.current, intersection.current);
@@ -157,257 +93,156 @@ export default function KnowledgeNode({ node, isNew = false }) {
     const handlePointerMove = useCallback((e) => {
         if (!isPointerDown.current) return;
         e.stopPropagation();
-
         const dx = e.clientX - pointerStart.current.x;
         const dy = e.clientY - pointerStart.current.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (!didDrag.current && Math.sqrt(dx * dx + dy * dy) < 5) return;
 
-        // Only activate drag after exceeding threshold
-        if (!dragging && dist > DRAG_THRESHOLD) {
+        if (!didDrag.current) {
+            didDrag.current = true;
             setDragging(true);
             setDraggingNode(true);
-            didDrag.current = true;
             gl.domElement.style.cursor = 'grabbing';
         }
 
-        if (!dragging && dist <= DRAG_THRESHOLD) return;
-
         raycaster.setFromCamera(
-            new THREE.Vector2(
-                (e.clientX / size.width) * 2 - 1,
-                -(e.clientY / size.height) * 2 + 1
-            ),
+            new THREE.Vector2((e.clientX / size.width) * 2 - 1, -(e.clientY / size.height) * 2 + 1),
             camera
         );
-
-        if (raycaster.ray.intersectPlane(dragPlane.current, intersection.current)) {
-            const newPos = intersection.current.add(dragOffset.current);
-            clampToOrb(newPos);
-            posRef.current.copy(newPos);
-
-            if (groupRef.current) {
-                groupRef.current.position.copy(newPos);
-            }
-        }
-    }, [dragging, camera, gl, raycaster, size, clampToOrb, setDraggingNode]);
+        raycaster.ray.intersectPlane(dragPlane.current, intersection.current);
+        const newPos = intersection.current.add(dragOffset.current);
+        clampToOrb(newPos);
+        posRef.current.copy(newPos);
+        if (groupRef.current) groupRef.current.position.copy(newPos);
+    }, [camera, gl, raycaster, size, clampToOrb, setDraggingNode]);
 
     const handlePointerUp = useCallback((e) => {
         e.stopPropagation();
-        const wasDragging = didDrag.current;
         isPointerDown.current = false;
 
-        if (dragging) {
+        if (didDrag.current) {
             setDragging(false);
             setDraggingNode(false);
             gl.domElement.style.cursor = 'default';
-
-            // Save new coordinates to store
             updateNode(node.id, {
-                coordinates: {
-                    x: posRef.current.x,
-                    y: posRef.current.y,
-                    z: posRef.current.z,
-                },
+                coordinates: { x: posRef.current.x, y: posRef.current.y, z: posRef.current.z },
             });
         }
+    }, [gl, node.id, updateNode, setDraggingNode]);
 
-        // If pointer didn't move much, treat as a click
-        if (!wasDragging) {
-            const now = Date.now();
-            const timeSinceLastClick = now - lastClickTime.current;
+    // Timer-based click: delay single click so double-click can cancel it
+    const clickTimer = useRef(null);
 
-            if (timeSinceLastClick < DOUBLE_CLICK_DELAY) {
-                // Double-click → dive into node
-                clearTimeout(clickTimer.current);
-                lastClickTime.current = 0;
-                startDive(node);
-            } else {
-                // Single click → open panel (delayed to check for double)
-                lastClickTime.current = now;
-                clickTimer.current = setTimeout(() => {
-                    selectNode(node.id);
-                }, DOUBLE_CLICK_DELAY);
-            }
-        }
-    }, [dragging, gl, node, updateNode, selectNode, setDraggingNode, startDive]);
-
-    const handlePointerOver = (e) => {
+    const handleClick = useCallback((e) => {
         e.stopPropagation();
-        setHovered(true);
-        setHoveredNodeId(node.id);
-        document.body.style.cursor = dragging ? 'grabbing' : 'grab';
-    };
+        if (didDrag.current) { didDrag.current = false; return; }
 
-    const handlePointerOut = () => {
-        setHovered(false);
-        setHoveredNodeId(null);
-        if (!dragging) {
-            document.body.style.cursor = 'default';
+        // If there's already a pending click, this is the 2nd click → double-click
+        if (clickTimer.current) {
+            clearTimeout(clickTimer.current);
+            clickTimer.current = null;
+            const fullNode = nodes.find(n => n.id === node.id) || node;
+            startDive(fullNode);
+            return;
         }
-    };
 
-    // ─── Animation frame ────────────────────────────────────
+        // First click — wait 300ms to see if a second click comes
+        clickTimer.current = setTimeout(() => {
+            clickTimer.current = null;
+            selectNode(node.id);
+        }, 300);
+    }, [selectNode, startDive, nodes, node]);
+
+    // Also handle native onDoubleClick as backup
+    const handleDoubleClick = useCallback((e) => {
+        e.stopPropagation();
+        if (clickTimer.current) { clearTimeout(clickTimer.current); clickTimer.current = null; }
+        const fullNode = nodes.find(n => n.id === node.id) || node;
+        startDive(fullNode);
+    }, [startDive, nodes, node]);
+
+    // Animation
     useFrame(({ clock }) => {
-        if (!meshRef.current || !groupRef.current) return;
+        if (!groupRef.current) return;
         const t = clock.getElapsedTime();
 
-        // Spawn animation
-        if (!spawnRef.current.done) {
-            spawnRef.current.scale = Math.min(1, spawnRef.current.scale + 0.04);
-            if (spawnRef.current.scale >= 1) spawnRef.current.done = true;
-        }
-
-        // Hover scale
-        const targetScale = isActive ? 1.6 : 1.0;
-        const currentScale = meshRef.current.scale.x;
-        const newScale = THREE.MathUtils.lerp(currentScale, targetScale * spawnRef.current.scale, 0.1);
-        meshRef.current.scale.setScalar(newScale);
-
-        // Critical / highlighted pulsing
-        if (node.status === 'critical' || isHighlighted) {
-            const pulse = 1 + Math.sin(t * 4) * 0.15;
-            meshRef.current.scale.multiplyScalar(pulse);
-        }
-
-        // Animate glow layers
-        glowRefs.current.forEach((ref, i) => {
-            if (ref) {
-                const glowPulse = 1 + Math.sin(t * 2 + i * 0.5) * 0.15;
-                const baseScale = glowLayers[i].scale * (isActive ? 1.4 : 1.0);
-                ref.scale.setScalar(baseScale * glowPulse * spawnRef.current.scale);
-            }
-        });
-
-        // ─── Slow aesthetic floating (only when NOT dragging) ────
         if (!dragging) {
-            const floatX = Math.sin(t * seed.xSpeed + seed.xPhase) * seed.xAmp;
-            const floatY = Math.cos(t * seed.ySpeed + seed.yPhase) * seed.yAmp;
-            const floatZ = Math.sin(t * seed.zSpeed + seed.zPhase) * seed.zAmp;
-
-            posRef.current.x = coords.x + floatX;
-            posRef.current.y = coords.y + floatY;
-            posRef.current.z = coords.z + floatZ;
-
-            // Ensure floating doesn't push outside orb
+            const fx = Math.sin(t * seed.sp + seed.xP) * seed.amp;
+            const fy = Math.cos(t * seed.sp * 0.8 + seed.yP) * seed.amp;
+            const fz = Math.sin(t * seed.sp * 0.6 + seed.zP) * seed.amp * 0.5;
+            posRef.current.set(clampedCoords.x + fx, clampedCoords.y + fy, clampedCoords.z + fz);
             clampToOrb(posRef.current);
-
             groupRef.current.position.copy(posRef.current);
         }
 
-        // Light intensity animation
-        if (lightRef.current) {
-            const baseIntensity = isActive ? config.lightIntensity * 2.5 : config.lightIntensity;
-            lightRef.current.intensity = baseIntensity + Math.sin(t * 2) * 0.3;
+        if (meshRef.current) {
+            const target = isActive ? 2.0 : 1.0;
+            const s = THREE.MathUtils.lerp(meshRef.current.scale.x, target, 0.1);
+            meshRef.current.scale.setScalar(s);
         }
     });
 
     return (
         <group
             ref={groupRef}
-            position={[coords.x, coords.y, coords.z]}
+            position={[clampedCoords.x, clampedCoords.y, clampedCoords.z]}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
+            onClick={handleClick}
+            onDoubleClick={handleDoubleClick}
         >
-            {/* ─── Main 3D Sphere (high segment count for smooth look) ── */}
+            {/* Core sphere */}
             <mesh
                 ref={meshRef}
-                onPointerOver={handlePointerOver}
-                onPointerOut={handlePointerOut}
+                onPointerOver={(e) => { e.stopPropagation(); setHovered(true); setHoveredNodeId(node.id); document.body.style.cursor = 'grab'; }}
+                onPointerOut={() => { setHovered(false); setHoveredNodeId(null); if (!dragging) document.body.style.cursor = 'default'; }}
             >
-                <sphereGeometry args={[config.radius, 32, 32]} />
+                <sphereGeometry args={[cfg.radius, 16, 16]} />
                 <meshStandardMaterial
-                    color={config.color}
-                    emissive={config.emissive}
-                    emissiveIntensity={isActive ? config.emissiveIntensity * 2 : config.emissiveIntensity}
-                    transparent
-                    opacity={dragging ? 1 : 0.95}
-                    roughness={0.15}
-                    metalness={0.4}
+                    color={nodeColor}
+                    emissive={nodeColor}
+                    emissiveIntensity={isActive ? cfg.emissiveIntensity * 2.5 : cfg.emissiveIntensity}
+                    transparent opacity={0.95}
+                    roughness={0.15} metalness={0.4}
                     toneMapped={false}
                 />
             </mesh>
 
-            {/* ─── Multi-layer Additive Glow (creates a 3D bloom effect) ── */}
-            {glowLayers.map((layer, i) => (
-                <mesh
-                    key={`glow-${i}`}
-                    ref={(el) => (glowRefs.current[i] = el)}
-                    scale={layer.scale}
-                >
-                    <sphereGeometry args={[config.radius, 16, 16]} />
-                    <meshBasicMaterial
-                        color={config.color}
-                        transparent
-                        opacity={dragging ? layer.opacity * 2 : isActive ? layer.opacity * 1.5 : layer.opacity}
-                        blending={THREE.AdditiveBlending}
-                        depthWrite={false}
-                    />
-                </mesh>
-            ))}
-
-            {/* ─── Inner core (bright center for depth illusion) ── */}
-            <mesh scale={0.5}>
-                <sphereGeometry args={[config.radius, 16, 16]} />
+            {/* Soft glow halo */}
+            <mesh scale={isActive ? 2.5 : 1.8}>
+                <sphereGeometry args={[cfg.radius, 8, 8]} />
                 <meshBasicMaterial
-                    color="#ffffff"
-                    transparent
-                    opacity={isActive ? 0.5 : 0.25}
+                    color={nodeColor}
+                    transparent opacity={isActive ? 0.15 : 0.06}
                     blending={THREE.AdditiveBlending}
                     depthWrite={false}
                 />
             </mesh>
 
-            {/* ─── Point Light (casts color onto nearby surfaces) ── */}
-            <pointLight
-                ref={lightRef}
-                color={config.color}
-                intensity={config.lightIntensity}
-                distance={config.lightDistance}
-            />
-
-            {/* ─── Tooltip on Hover ─────────────────────── */}
+            {/* Tooltip */}
             {isActive && !dragging && (
-                <Html
-                    center
-                    distanceFactor={12}
-                    style={{
-                        pointerEvents: 'none',
-                        userSelect: 'none',
-                    }}
-                >
-                    <div
-                        style={{
-                            background: 'rgba(2, 8, 20, 0.92)',
-                            backdropFilter: 'blur(12px)',
-                            border: `1px solid ${config.color}44`,
-                            borderRadius: '8px',
-                            padding: '8px 14px',
-                            whiteSpace: 'nowrap',
-                            transform: 'translateY(-30px)',
-                            boxShadow: `0 0 24px ${config.color}30, inset 0 0 12px ${config.color}10`,
-                        }}
-                    >
-                        <div
-                            style={{
-                                fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                color: '#e8f4fd',
-                                marginBottom: '3px',
-                            }}
-                        >
+                <Html center distanceFactor={12} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                    <div style={{
+                        background: 'rgba(2, 8, 20, 0.92)',
+                        backdropFilter: 'blur(12px)',
+                        border: `1px solid ${nodeColor}44`,
+                        borderRadius: '8px',
+                        padding: '6px 12px',
+                        whiteSpace: 'nowrap',
+                        transform: 'translateY(-28px)',
+                        boxShadow: `0 0 20px ${nodeColor}30`,
+                    }}>
+                        <div style={{
+                            fontFamily: "'SF Pro Display', -apple-system, sans-serif",
+                            fontSize: '11px', fontWeight: 600, color: '#e8f4fd', marginBottom: '2px',
+                        }}>
                             {node.title}
                         </div>
-                        <div
-                            style={{
-                                fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
-                                fontSize: '10px',
-                                color: config.color,
-                                letterSpacing: '0.5px',
-                            }}
-                        >
-                            {Math.round(node.current_strength)}% • {node.brain_region?.replace('_', ' ')} • grab to move
+                        <div style={{
+                            fontFamily: "'SF Pro Text', -apple-system, sans-serif",
+                            fontSize: '9px', color: nodeColor, letterSpacing: '0.4px',
+                        }}>
+                            {Math.round(node.current_strength)}% · click for details · double-click to dive · drag to move
                         </div>
                     </div>
                 </Html>

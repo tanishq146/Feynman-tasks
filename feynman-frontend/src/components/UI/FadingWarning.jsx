@@ -10,6 +10,7 @@ const fontMono = "'SF Pro Text', -apple-system, sans-serif";
 
 export default function FadingWarning({ onStudyNow }) {
     const nodes = useBrainStore(s => s.nodes);
+    const isLobeView = useBrainStore(s => s.isLobeView);
     const [dismissed, setDismissed] = useState(false);
     const [visible, setVisible] = useState(false);
 
@@ -34,7 +35,7 @@ export default function FadingWarning({ onStudyNow }) {
 
     return (
         <AnimatePresence>
-            {visible && count > 0 && (
+            {visible && count > 0 && !isLobeView && (
                 <motion.div
                     initial={{ y: -60, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}

@@ -1,6 +1,6 @@
 import { Suspense, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Stars } from '@react-three/drei';
+import { OrbitControls, Stars, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import BrainMesh from './BrainMesh';
 import KnowledgeNode from './KnowledgeNode';
@@ -14,30 +14,24 @@ function BrainContent() {
 
     return (
         <>
-            {/* ─── Deep Space Star Layers ─────────────────── */}
+            {/* ─── Deep Space Stars ─────────────────── */}
             <Stars
                 radius={100}
-                depth={80}
-                count={3000}
-                factor={3}
-                saturation={0.1}
-                fade
-                speed={0.2}
-            />
-            <Stars
-                radius={60}
-                depth={40}
+                depth={60}
                 count={800}
-                factor={5}
-                saturation={0}
+                factor={3}
+                saturation={0.08}
                 fade
-                speed={0.5}
+                speed={0}
             />
 
             {/* ─── Space Environment (nebulae, galaxies, shooting stars) ── */}
             <SpaceEnvironment />
 
-            {/* ─── Brain Wireframe ───────────────────────── */}
+            {/* ─── Environment for reflections ─── */}
+            <Environment preset="night" />
+
+            {/* ─── Brain ───────────────────────────────────── */}
             <BrainMesh />
 
             {/* ─── Connection Lines ──────────────────────── */}
@@ -66,7 +60,7 @@ function BrainControls() {
             maxDistance={30}
             enablePan={false}
             autoRotate={!isDraggingNode}
-            autoRotateSpeed={0.15}
+            autoRotateSpeed={0.1}
             enabled={!isDraggingNode}
         />
     );
@@ -89,9 +83,9 @@ export default function BrainScene() {
                     antialias: true,
                     alpha: true,
                     toneMapping: THREE.ACESFilmicToneMapping,
-                    toneMappingExposure: 1.2,
+                    toneMappingExposure: 1.1,
                 }}
-                style={{ background: '#020408' }}
+                style={{ background: '#050510' }}
             >
                 <Suspense fallback={null}>
                     <BrainContent />
@@ -99,8 +93,8 @@ export default function BrainScene() {
 
                 <BrainControls />
 
-                {/* ─── Fog for depth ──────────────────────── */}
-                <fog attach="fog" args={['#020408', 20, 50]} />
+                {/* ─── Fog for atmosphere ──────────────── */}
+                <fog attach="fog" args={['#050510', 22, 55]} />
             </Canvas>
 
             {/* ─── Loading Overlay ──────────────────────── */}
@@ -113,7 +107,7 @@ export default function BrainScene() {
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        background: 'rgba(2, 4, 8, 0.9)',
+                        background: 'rgba(5, 5, 16, 0.92)',
                         zIndex: 10,
                     }}
                 >
@@ -121,8 +115,8 @@ export default function BrainScene() {
                         style={{
                             width: '40px',
                             height: '40px',
-                            border: '2px solid rgba(0, 212, 255, 0.15)',
-                            borderTop: '2px solid #00d4ff',
+                            border: '2px solid rgba(124, 92, 224, 0.15)',
+                            borderTop: '2px solid #7c5ce0',
                             borderRadius: '50%',
                             animation: 'spin 1s linear infinite',
                             marginBottom: '16px',
@@ -132,7 +126,7 @@ export default function BrainScene() {
                         style={{
                             fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
                             fontSize: '16px',
-                            color: '#4a9eba',
+                            color: '#7c9eba',
                             letterSpacing: '3px',
                             textTransform: 'uppercase',
                         }}
@@ -159,8 +153,8 @@ export default function BrainScene() {
                         style={{
                             width: '60px',
                             height: '60px',
-                            border: '2px solid rgba(0, 212, 255, 0.1)',
-                            borderTop: '2px solid #00d4ff',
+                            border: '2px solid rgba(124, 92, 224, 0.1)',
+                            borderTop: '2px solid #7c5ce0',
                             borderRadius: '50%',
                             animation: 'spin 0.8s linear infinite',
                         }}

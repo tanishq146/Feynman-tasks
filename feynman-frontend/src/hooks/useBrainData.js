@@ -29,8 +29,10 @@ export function useBrainData() {
     }, [setBrainData, setLoading, setError]);
 }
 
-export async function ingestKnowledge(content) {
-    const res = await api.post('/api/knowledge/ingest', { content });
+export async function ingestKnowledge(content, brain_region) {
+    const body = { content };
+    if (brain_region) body.brain_region = brain_region;
+    const res = await api.post('/api/knowledge/ingest', body);
     return res.data;
 }
 
@@ -56,6 +58,11 @@ export async function getFadingNodes() {
 
 export async function deleteNode(nodeId) {
     const res = await api.delete(`/api/knowledge/${nodeId}`);
+    return res.data;
+}
+
+export async function toggleCrucial(nodeId) {
+    const res = await api.patch(`/api/knowledge/${nodeId}/crucial`);
     return res.data;
 }
 

@@ -10,7 +10,11 @@ import FadingWarning from './components/UI/FadingWarning';
 import CommandMenu from './components/UI/CommandMenu';
 import ConnectionPanel from './components/UI/ConnectionPanel';
 import NodeDive from './components/UI/NodeDive';
+import LobeView from './components/UI/LobeView';
+import LobeDiveTransition from './components/UI/LobeDiveTransition';
+import NotesPanel from './components/UI/NotesPanel';
 import Toast from './components/UI/Toast';
+
 import AuthScreen from './components/UI/AuthScreen';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useBrainData } from './hooks/useBrainData';
@@ -29,6 +33,9 @@ function FeynmanApp() {
   // Connection panel state from store
   const isConnectionPanelOpen = useBrainStore((s) => s.isConnectionPanelOpen);
   const clearEdge = useBrainStore((s) => s.clearEdge);
+  const isLobeView = useBrainStore((s) => s.isLobeView);
+  const isNotesPanelOpen = useBrainStore((s) => s.isNotesPanelOpen);
+  const closeNotesPanel = useBrainStore((s) => s.closeNotesPanel);
 
   // Panel states — all managed here, toggled via CommandMenu
   const [chatOpen, setChatOpen] = useState(false);
@@ -87,10 +94,9 @@ function FeynmanApp() {
       {/* 3D Brain Scene (fills entire viewport) */}
       <BrainScene />
 
-      {/* UI Overlays */}
-      <TopBar />
-      <InputBar />
-      <FeynmanPanel />
+      {/* UI Overlays — hidden when LobeView is active */}
+      {!isLobeView && <TopBar />}
+      {!isLobeView && <InputBar />}
       <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />
       <BeliefEvolutionPanel
         isOpen={beliefPanelOpen}
@@ -118,7 +124,7 @@ function FeynmanApp() {
       <FadingWarning onStudyNow={handleStudyFromWarning} />
 
       {/* ✦ Command Menu — single access point for all tools */}
-      <CommandMenu onSelect={handleMenuSelect} activePanel={activePanel} />
+      {!isLobeView && <CommandMenu onSelect={handleMenuSelect} activePanel={activePanel} />}
 
       {/* Study Mode Overlay */}
       <StudyMode
@@ -131,6 +137,33 @@ function FeynmanApp() {
 
       {/* Node Dive — full screen, above everything */}
       <NodeDive />
+
+      {/* Lobe Dive Transition — cinematic entry animation */}
+      <LobeDiveTransition />
+
+      {/* Lobe View — immersive lobe exploration */}
+      <LobeView />
+
+      {/* Feynman Panel — highest z-index so it works above LobeView too */}
+      <FeynmanPanel />
+
+      {/* Notes Panel — slides in from the right */}
+      {isNotesPanelOpen && (
+        <div
+          onClick={closeNotesPanel}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 245,
+            background: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+          }}
+        />
+      )}
+      <NotesPanel />
+
+
 
       <style>{`
         @keyframes fadeIn {

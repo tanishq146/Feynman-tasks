@@ -16,6 +16,7 @@
     "axios": "^1.13.6",
     "firebase": "^12.10.0",
     "framer-motion": "^12.34.5",
+    "katex": "^0.16.42",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tailwindcss": "^4.2.1",

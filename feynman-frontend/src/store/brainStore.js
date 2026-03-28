@@ -24,6 +24,15 @@ const useBrainStore = create((set, get) => ({
     diveNode: null,
     isDiving: false,
 
+    // ─── Lobe View (click lobe to enter) ──────────────
+    activeLobeKey: null,
+    isLobeView: false,
+
+    // ─── Notes Panel ──────────────────────────────────
+    isNotesPanelOpen: false,
+    notesPanelNodeId: null,
+
+
     // ─── Toasts ───────────────────────────────────────────
     toasts: [],
 
@@ -48,6 +57,7 @@ const useBrainStore = create((set, get) => ({
             isFeynmanPanelOpen: !!node,
         });
     },
+
 
     clearSelection: () =>
         set({
@@ -93,6 +103,29 @@ const useBrainStore = create((set, get) => ({
             diveNode: null,
             isDiving: false,
         }),
+
+    enterLobe: (lobeKey) => set({
+        activeLobeKey: lobeKey,
+        isLobeView: true,
+        selectedNodeId: null,
+        selectedNode: null,
+        isFeynmanPanelOpen: false,
+    }),
+
+    exitLobe: () => set({
+        activeLobeKey: null,
+        isLobeView: false,
+    }),
+
+    openNotesPanel: (nodeId) => set({
+        isNotesPanelOpen: true,
+        notesPanelNodeId: nodeId,
+    }),
+
+    closeNotesPanel: () => set({
+        isNotesPanelOpen: false,
+        notesPanelNodeId: null,
+    }),
 
     toggleHighlightFading: () =>
         set((s) => ({ highlightFading: !s.highlightFading })),

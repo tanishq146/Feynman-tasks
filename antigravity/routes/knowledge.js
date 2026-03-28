@@ -29,7 +29,7 @@ const router = Router();
 router.post('/ingest', async (req, res, next) => {
     try {
         const userId = req.user.uid;
-        const { content } = req.body;
+        const { content, brain_region: userRegion } = req.body;
 
         if (!content || typeof content !== 'string' || content.trim().length === 0) {
             return res.status(400).json({ error: 'Content is required. Send { "content": "your knowledge" }' });
@@ -40,7 +40,15 @@ router.post('/ingest', async (req, res, next) => {
         // ── Step 1: AI classifies and analyzes the content ──────────────
         console.log('🧠 Analyzing new knowledge...');
         const analysis = await analyzeAndClassify(rawContent);
-        console.log(`🧠 Classified as: ${analysis.topic_category} → ${analysis.brain_region}`);
+
+        // If user chose a specific brain region, override AI classification
+        const validRegions = ['hippocampus', 'prefrontal_cortex', 'amygdala', 'cerebellum', 'wernickes_area', 'occipital_lobe', 'temporal_lobe'];
+        if (userRegion && validRegions.includes(userRegion)) {
+            analysis.brain_region = userRegion;
+            console.log(`🧠 User override → ${userRegion}`);
+        } else {
+            console.log(`🧠 Classified as: ${analysis.topic_category} → ${analysis.brain_region}`);
+        }
 
         // ── Step 2: Generate 3D coordinates in the brain ────────────────
         const coords = generateCoordinates(analysis.brain_region);
@@ -405,6 +413,53 @@ router.delete('/:id', async (req, res, next) => {
         if (error) throw error;
 
         res.json({ deleted: true });
+    } catch (err) {
+        next(err);
+    }
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PATCH /api/knowledge/:id/crucial
+// Toggle whether a node is marked as crucial by the user.
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.patch('/:id/crucial', async (req, res, next) => {
+    try {
+        const nodeId = req.params.id;
+
+        // Fetch current node
+        const { data: node, error: fetchError } = await supabase
+            .from('knowledge_nodes')
+            .select('*')
+            .eq('id', nodeId)
+            .eq('user_id', req.user.uid)
+            .single();
+
+        if (fetchError) {
+            if (fetchError.code === 'PGRST116') return res.status(404).json({ error: 'Not found' });
+            throw fetchError;
+        }
+
+        const feynman = node.feynman || {};
+        const newValue = !feynman.is_crucial;
+
+        const updatedFeynman = { ...feynman, is_crucial: newValue };
+
+        const { data: updated, error: updateError } = await supabase
+            .from('knowledge_nodes')
+            .update({ feynman: updatedFeynman })
+            .eq('id', nodeId)
+            .select()
+            .single();
+
+        if (updateError) throw updateError;
+
+        const enriched = enrichNodeWithStrength(updated);
+        broadcast('node.updated', enriched);
+
+        console.log(`${newValue ? '⭐' : '○'} Node "${enriched.title}" marked as ${newValue ? 'CRUCIAL' : 'normal'}`);
+        res.json(enriched);
     } catch (err) {
         next(err);
     }

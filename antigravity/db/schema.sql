@@ -90,3 +90,18 @@ CREATE INDEX IF NOT EXISTS idx_beliefs_created  ON beliefs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_shifts_type      ON belief_shifts(shift_type);
 CREATE INDEX IF NOT EXISTS idx_shifts_created   ON belief_shifts(created_at DESC);
 
+-- ─── Node Notes ─────────────────────────────────────────────
+-- Rich text notes attached to knowledge nodes, with image support.
+CREATE TABLE IF NOT EXISTS node_notes (
+  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  node_id      UUID NOT NULL REFERENCES knowledge_nodes(id) ON DELETE CASCADE,
+  user_id      TEXT NOT NULL,
+  content      TEXT NOT NULL,
+  images       JSONB DEFAULT '[]',
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notes_node       ON node_notes(node_id);
+CREATE INDEX IF NOT EXISTS idx_notes_user       ON node_notes(user_id);
+CREATE INDEX IF NOT EXISTS idx_notes_created    ON node_notes(created_at DESC);

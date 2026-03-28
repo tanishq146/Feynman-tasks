@@ -20,28 +20,61 @@ router.post('/', async (req, res, next) => {
 
         const { data: nodes } = await supabase
             .from('knowledge_nodes')
-            .select('title, summary, tags, raw_content, brain_region, topic_category')
+            .select('id, title, summary, tags, raw_content, brain_region, topic_category')
             .eq('user_id', req.user.uid)
             .order('created_at', { ascending: false })
             .limit(50);
 
-        const knowledgeContext = (nodes || []).map((n, i) =>
-            `[${i + 1}] "${n.title}" (${n.brain_region || 'unknown'}, ${n.topic_category || 'General'})
+        // Fetch ALL user notes across all nodes — Feynman never forgets
+        const { data: allNotes } = await supabase
+            .from('node_notes')
+            .select('content, node_id, created_at, images')
+            .eq('user_id', req.user.uid)
+            .order('created_at', { ascending: false })
+            .limit(100);
+
+        // Build a map of notes per node for context injection
+        const notesByNode = {};
+        (allNotes || []).forEach(note => {
+            if (!notesByNode[note.node_id]) notesByNode[note.node_id] = [];
+            notesByNode[note.node_id].push(note);
+        });
+
+        const knowledgeContext = (nodes || []).map((n, i) => {
+            const nodeNotes = notesByNode[n.id] || [];
+            const notesSection = nodeNotes.length > 0
+                ? `\n   User's Notes: ${nodeNotes.map(note => `"${note.content.slice(0, 200)}"`).join(' | ')}`
+                : '';
+            return `[${i + 1}] "${n.title}" (${n.brain_region || 'unknown'}, ${n.topic_category || 'General'})
    Summary: ${n.summary || 'No summary'}
    Tags: ${(n.tags || []).join(', ') || 'none'}
-   Content: ${(n.raw_content || '').slice(0, 300)}`
-        ).join('\n\n');
+   Content: ${(n.raw_content || '').slice(0, 300)}${notesSection}`;
+        }).join('\n\n');
+
+        // Separate notes context for nodes the user may have notes on but are not in top 50
+        const orphanNotes = (allNotes || []).filter(n =>
+            !(nodes || []).some(node => node.id === n.node_id)
+        );
+        const orphanNotesContext = orphanNotes.length > 0
+            ? `\n\nADDITIONAL USER NOTES (from other nodes):\n${orphanNotes.map(n => `- "${n.content.slice(0, 200)}"`).join('\n')}`
+            : '';
 
         // Build system prompt — focused mode if nodeContext is provided
         let systemPrompt;
 
-        const nodeBlock = nodeContext ? `
+        const nodeBlock = nodeContext ? (() => {
+            const focusedNotes = notesByNode[nodeContext.id] || [];
+            const notesStr = focusedNotes.length > 0
+                ? `\nUser's Personal Notes on this topic:\n${focusedNotes.map(n => `- "${n.content.slice(0, 300)}"`).join('\n')}`
+                : '';
+            return `
 FOCUSED NODE:
 Title: "${nodeContext.title}"
 Category: ${nodeContext.topic_category || 'General'} (${nodeContext.brain_region || 'unknown'})
 Summary: ${nodeContext.summary || 'No summary'}
 Full Content: ${(nodeContext.raw_content || '').slice(0, 1000)}
-Tags: ${(nodeContext.tags || []).join(', ') || 'none'}` : '';
+Tags: ${(nodeContext.tags || []).join(', ') || 'none'}${notesStr}`;
+        })() : '';
 
         if (nodeContext && nodeContext.title && diveMode === 'strict') {
             // ─── STRICT MODE — Debate & Challenge ────────────────
@@ -126,6 +159,7 @@ Your core principles:
 4. Be conversational, warm, intellectually curious, and encouraging.
 5. If the question relates to stored knowledge, reference it specifically and build upon it.
 6. If outside stored knowledge, still answer comprehensively and mention it's not in their brain yet.
+7. You have PERFECT MEMORY of all the user's personal notes. When relevant, reference their own notes and observations back to them — they wrote these thoughts and will be impressed you remember.
 
 Formatting rules (CRITICAL — follow exactly):
 - Use **bold text** for section headings and key terms. NEVER use # or ## or ### or #### markdown headers.
@@ -136,8 +170,8 @@ Formatting rules (CRITICAL — follow exactly):
 - End your response with a key insight or takeaway marked with ✦
 - Structure longer answers into clear sections with bold headers like: **What Is It?**, **Why It Matters**, **How It Works**, **Example**, etc.
 
-The user's stored knowledge (${(nodes || []).length} nodes):
-${knowledgeContext || 'No knowledge stored yet.'}
+The user's stored knowledge (${(nodes || []).length} nodes) with their personal notes:
+${knowledgeContext || 'No knowledge stored yet.'}${orphanNotesContext}
 
 Always aim to educate, inspire, and make the user feel smarter after reading your answer.`;
         }
