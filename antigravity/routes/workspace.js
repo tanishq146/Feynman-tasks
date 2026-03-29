@@ -18,6 +18,27 @@ import { groq, GROQ_MODEL } from '../lib/groq.js';
 
 const router = Router();
 
+// ─── Verify table exists on first use ────────────────────────────────────────
+let tableReady = false;
+async function ensureTable() {
+    if (tableReady) return;
+    // Try a lightweight query to verify the table exists
+    const { error } = await supabase
+        .from('workspace_notes')
+        .select('id')
+        .limit(1);
+    if (error && error.code === '42P01') {
+        // Table does not exist — give a clear message
+        console.error('❌ workspace_notes table does not exist. Run the migration:');
+        console.error('   migrations/add_workspace_notes.sql');
+        throw new Error('workspace_notes table not found. Run the migration SQL in Supabase dashboard.');
+    }
+    if (error) {
+        console.warn('⚠️ workspace_notes check returned error:', error.message);
+    }
+    tableReady = true;
+}
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // GET /api/workspace/notes
@@ -26,6 +47,7 @@ const router = Router();
 
 router.get('/notes', async (req, res, next) => {
     try {
+        await ensureTable();
         const userId = req.user.uid;
 
         const { data, error } = await supabase
@@ -51,6 +73,7 @@ router.get('/notes', async (req, res, next) => {
 
 router.post('/notes', async (req, res, next) => {
     try {
+        await ensureTable();
         const userId = req.user.uid;
         const { title, content } = req.body;
 

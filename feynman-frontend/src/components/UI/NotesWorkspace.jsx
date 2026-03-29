@@ -265,6 +265,8 @@ export default function NotesWorkspace({ isOpen, onClose }) {
 
     // ─── Auto-save on content change ────────────────────────────────────
     const saveNote = useCallback(async (noteId, updates) => {
+        // Don't try to save notes that haven't been persisted to server yet
+        if (!noteId || String(noteId).startsWith('temp-')) return;
         setSaving(true);
         try {
             const res = await api.put(`/api/workspace/notes/${noteId}`, updates);
@@ -326,9 +328,15 @@ export default function NotesWorkspace({ isOpen, onClose }) {
             setNotes(prev => prev.map(n => n.id === tempId ? newNote : n));
             setActiveNoteId(newNote.id);
         } catch (err) {
-            console.error('Failed to create note:', err);
-            addToast({ type: 'danger', icon: '✕', message: 'Failed to save note to server', duration: 3000 });
-            // Keep the local note so user doesn't lose their place
+            console.error('Failed to create note:', err?.response?.data || err);
+            const msg = err?.response?.data?.error || 'Failed to save note to server';
+            addToast({ type: 'danger', icon: '✕', message: msg, duration: 5000 });
+            // Remove the temp note since it can't be saved
+            setNotes(prev => prev.filter(n => n.id !== tempId));
+            setActiveNoteId(prev => {
+                const remaining = notes.filter(n => n.id !== tempId);
+                return remaining.length > 0 ? remaining[0].id : null;
+            });
         }
     };
 
@@ -633,7 +641,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                 transition: 'all 0.2s', letterSpacing: '0.5px',
                             }}
                         >
-                            {analyzing ? '✦ Analyzing...' : '✦ Analyze All Notes'}
+                            {analyzing ? '✦ Analyzing...' : '✦ Feynman Analyze All'}
                         </button>
                     </div>
                 )}
@@ -738,7 +746,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                     transition: 'all 0.2s',
                                 }}
                             >
-                                ✦ {analyzing ? 'Analyzing...' : 'Extract Knowledge'}
+                                ✦ {analyzing ? 'Analyzing...' : 'Feynman Analyze'}
                             </button>
 
                             <div style={{ flex: 1 }} />
