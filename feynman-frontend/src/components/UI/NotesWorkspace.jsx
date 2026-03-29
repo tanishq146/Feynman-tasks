@@ -329,14 +329,8 @@ export default function NotesWorkspace({ isOpen, onClose }) {
             setActiveNoteId(newNote.id);
         } catch (err) {
             console.error('Failed to create note:', err?.response?.data || err);
-            const msg = err?.response?.data?.error || 'Failed to save note to server';
-            addToast({ type: 'danger', icon: '✕', message: msg, duration: 5000 });
-            // Remove the temp note since it can't be saved
-            setNotes(prev => prev.filter(n => n.id !== tempId));
-            setActiveNoteId(prev => {
-                const remaining = notes.filter(n => n.id !== tempId);
-                return remaining.length > 0 ? remaining[0].id : null;
-            });
+            // Keep the temp note — user can still write locally
+            // It just won't be saved to server until connectivity is restored
         }
     };
 
