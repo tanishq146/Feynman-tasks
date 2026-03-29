@@ -66,6 +66,16 @@ export async function toggleCrucial(nodeId) {
     return res.data;
 }
 
+export async function updateNodeContent(nodeId, content) {
+    const res = await api.put(`/api/knowledge/${nodeId}`, { content });
+    return res.data;
+}
+
+export async function exportVault() {
+    const res = await api.get('/api/knowledge/export');
+    return res.data;
+}
+
 // ─── Feynman Features API ───────────────────────────────────────────────────
 
 export async function fetchFeynmanExtras(nodeId) {

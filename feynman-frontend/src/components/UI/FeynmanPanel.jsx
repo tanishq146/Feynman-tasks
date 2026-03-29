@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useBrainStore from '../../store/brainStore';
-import { reviewNode, getNodeConnections, fetchFeynmanExtras, gradeChallenge, gradeTeach, generateMoment, fillKnowledgeGap, deleteNode, toggleCrucial } from '../../hooks/useBrainData';
+import { reviewNode, getNodeConnections, fetchFeynmanExtras, gradeChallenge, gradeTeach, generateMoment, fillKnowledgeGap, deleteNode, toggleCrucial, updateNodeContent } from '../../hooks/useBrainData';
 import { timeUntilThreshold } from '../../hooks/useDecayTicker';
 import ForgettingCurve from './ForgettingCurve';
 import { sf, sfT, body, timeAgo, Icons, GlassCard, SectionHead, Accordion, Metric, StrengthBar, Loader, RealLifeMoment, FeynmanChallenge, TeachIt, KnowledgeGaps } from './FeynmanPanelSections';
@@ -41,6 +41,9 @@ export default function FeynmanPanel() {
     const [momentCount, setMomentCount] = useState(1);
     const [fillingGap, setFillingGap] = useState(null);
     const [togglingCrucial, setTogglingCrucial] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editContent, setEditContent] = useState('');
+    const [isSavingEdit, setIsSavingEdit] = useState(false);
 
     useEffect(() => { if (selectedNode?.id) getNodeConnections(selectedNode.id).then(setConnections).catch(() => setConnections([])); else setConnections([]); }, [selectedNode?.id]);
 
@@ -51,7 +54,7 @@ export default function FeynmanPanel() {
                 setExtras({ challenge_question: f.challenge_question, knowledge_gaps: f.knowledge_gaps, real_life_moment: f.real_life_moment, challenge_attempts: f.challenge_attempts || [], teach_attempts: f.teach_attempts || [], feynman_certified: f.feynman_certified || false });
             } else { setExtrasLoading(true); fetchFeynmanExtras(selectedNode.id).then(d => { setExtras(d); setExtrasLoading(false); }).catch(() => setExtrasLoading(false)); }
         }
-        setChallengeAnswer(''); setChallengeResult(null); setTeachExplanation(''); setTeachResult(null); setMomentCount(1); setIsExpanded(false); setActiveTab('overview');
+        setChallengeAnswer(''); setChallengeResult(null); setTeachExplanation(''); setTeachResult(null); setMomentCount(1); setIsExpanded(false); setActiveTab('overview'); setIsEditing(false); setEditContent('');
     }, [selectedNode?.id, selectedNode?.feynman]);
 
     const handleReview = async () => { if (!selectedNode || reviewing) return; setReviewing(true); try { const u = await reviewNode(selectedNode.id); updateNode(selectedNode.id, { current_strength: u.current_strength, status: u.status, last_reviewed_at: u.last_reviewed_at, decay_rate: u.decay_rate }); addToast({ type: 'success', icon: '✦', message: `Reviewed "${selectedNode.title}"`, duration: 3000 }); } catch { addToast({ type: 'danger', icon: '✕', message: 'Failed to review', duration: 4000 }); } finally { setReviewing(false); } };
@@ -75,6 +78,27 @@ export default function FeynmanPanel() {
             addToast({ type: 'danger', icon: '✕', message: msg, duration: 4000 });
         } finally {
             setTogglingCrucial(false);
+        }
+    };
+
+    const handleStartEdit = () => {
+        setEditContent(selectedNode?.raw_content || '');
+        setIsEditing(true);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editContent.trim() || isSavingEdit || !selectedNode?.id) return;
+        setIsSavingEdit(true);
+        try {
+            const updated = await updateNodeContent(selectedNode.id, editContent);
+            updateNode(selectedNode.id, updated);
+            addToast({ type: 'success', icon: '✦', message: `Updated "${updated.title}"`, duration: 3000 });
+            setIsEditing(false);
+        } catch (err) {
+            const msg = err?.response?.data?.error || 'Failed to save';
+            addToast({ type: 'danger', icon: '✕', message: msg, duration: 4000 });
+        } finally {
+            setIsSavingEdit(false);
         }
     };
 
@@ -114,6 +138,11 @@ export default function FeynmanPanel() {
                                 </button>
                             </div>
                             <div style={{ display: 'flex', gap: '6px', marginLeft: '12px', flexShrink: 0 }}>
+                                <button onClick={handleStartEdit} title="Edit node" style={{ background: isEditing ? 'rgba(0,212,255,0.12)' : 'rgba(255,255,255,0.03)', border: `1px solid ${isEditing ? 'rgba(0,212,255,0.25)' : 'rgba(255,255,255,0.06)'}`, borderRadius: '10px', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,212,255,0.1)'; e.currentTarget.style.transform = 'scale(1.08)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = isEditing ? 'rgba(0,212,255,0.12)' : 'rgba(255,255,255,0.03)'; e.currentTarget.style.transform = 'scale(1)'; }}>
+                                    {Icons.edit(isEditing ? '#00d4ff' : '#4a9eba', 14)}
+                                </button>
                                 <button onClick={() => setIsExpanded(!isExpanded)} title={isExpanded ? 'Collapse' : 'Expand'} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.06)`, borderRadius: '10px', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
                                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,212,255,0.1)'; e.currentTarget.style.transform = 'scale(1.08)'; }}
                                     onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.transform = 'scale(1)'; }}>
@@ -163,6 +192,18 @@ export default function FeynmanPanel() {
                                 <motion.div key={activeTab} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.25 }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
                                     {activeTab === 'overview' && (<>
+                                        {/* ═══ INLINE EDIT MODE ═══ */}
+                                        {isEditing && (
+                                            <GlassCard accent="rgba(0,212,255,0.15)" glow="rgba(0,212,255,0.04)">
+                                                <SectionHead icon={Icons.edit('#00d4ff', 13)} label="Edit Knowledge" color="#00d4ff" />
+                                                <textarea value={editContent} onChange={e => setEditContent(e.target.value)} placeholder="Edit your knowledge..." rows={6} style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,212,255,0.15)', borderRadius: '12px', padding: '14px 16px', color: '#e8f4fd', fontFamily: sfT, fontSize: '13px', lineHeight: '1.6', resize: 'vertical', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.3s' }} onFocus={e => e.target.style.borderColor = 'rgba(0,212,255,0.4)'} onBlur={e => e.target.style.borderColor = 'rgba(0,212,255,0.15)'} />
+                                                <div style={{ display: 'flex', gap: '8px', marginTop: '12px', justifyContent: 'flex-end' }}>
+                                                    <button onClick={() => setIsEditing(false)} style={{ padding: '9px 18px', borderRadius: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#4a9eba', fontFamily: sfT, fontSize: '11px', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}>Cancel</button>
+                                                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleSaveEdit} disabled={isSavingEdit || !editContent.trim()} style={{ padding: '9px 22px', borderRadius: '10px', background: 'linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,212,255,0.06))', border: '1px solid rgba(0,212,255,0.3)', color: '#00d4ff', fontFamily: sfT, fontSize: '11px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', cursor: isSavingEdit ? 'wait' : 'pointer', opacity: isSavingEdit || !editContent.trim() ? 0.4 : 1, transition: 'all 0.3s' }}>{isSavingEdit ? 'Saving...' : 'Save & Re-analyze'}</motion.button>
+                                                </div>
+                                                <p style={{ fontFamily: sfT, fontSize: '10px', color: 'rgba(255,255,255,0.25)', marginTop: '10px', lineHeight: '1.5' }}>✦ Saving re-runs AI analysis — title, summary, tags, and Feynman analysis will update automatically.</p>
+                                            </GlassCard>
+                                        )}
                                         {(extras?.real_life_moment || extrasLoading) && <RealLifeMoment moment={extras?.real_life_moment} loading={extrasLoading || momentLoading} count={momentCount} onRefresh={handleNewMoment} />}
                                         {selectedNode.summary && <GlassCard accent="rgba(255,255,255,0.06)"><SectionHead icon={Icons.feynman('#7ec8e3', 13)} label="Summary" color="#7ec8e3" /><p style={body}>{selectedNode.summary}</p></GlassCard>}
                                         {feynman.why_important && <GlassCard accent="rgba(124,58,237,0.1)"><SectionHead icon={Icons.bulb('#a78bfa', 13)} label="Why You Learned This" color="#a78bfa" /><p style={body}>{feynman.why_important}</p></GlassCard>}

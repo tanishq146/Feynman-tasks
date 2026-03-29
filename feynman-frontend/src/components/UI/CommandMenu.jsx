@@ -5,6 +5,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useBrainStore from '../../store/brainStore';
+import { exportVault } from '../../hooks/useBrainData';
+import { generateVaultZip } from '../../lib/vaultExport';
+import VaultImportModal from './VaultImportModal';
 
 const font = "'SF Pro Display', -apple-system, sans-serif";
 const fontMono = "'SF Pro Text', -apple-system, sans-serif";
@@ -37,13 +40,42 @@ const menuItems = [
         colorBg: 'rgba(124, 58, 237, 0.08)',
         colorBorder: 'rgba(124, 58, 237, 0.15)',
     },
+    {
+        id: 'vault',
+        icon: '📦',
+        label: 'Vault',
+        description: 'Export as Markdown',
+        color: '#00ff88',
+        colorBg: 'rgba(0, 255, 136, 0.08)',
+        colorBorder: 'rgba(0, 255, 136, 0.15)',
+    },
+    {
+        id: 'import',
+        icon: '📥',
+        label: 'Import',
+        description: 'Import Markdown / Obsidian',
+        color: '#a78bfa',
+        colorBg: 'rgba(167, 139, 250, 0.08)',
+        colorBorder: 'rgba(167, 139, 250, 0.15)',
+    },
 ];
 
 export default function CommandMenu({ onSelect, activePanel }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [vaultExporting, setVaultExporting] = useState(false);
+    const [vaultDone, setVaultDone] = useState(false);
+    const [showImportModal, setShowImportModal] = useState(false);
     const menuRef = useRef(null);
     const nodes = useBrainStore(s => s.nodes);
+    const addToast = useBrainStore(s => s.addToast);
     const fadingCount = nodes.filter(n => (n.current_strength || 100) < 60).length;
+
+    // Vault sync tracking — detect if vault is out of date
+    const lastSyncStr = typeof window !== 'undefined' ? localStorage.getItem('feynman_vault_last_sync') : null;
+    const lastSyncData = lastSyncStr ? JSON.parse(lastSyncStr) : null;
+    const vaultOutOfSync = lastSyncData
+        ? nodes.length !== lastSyncData.nodeCount || Date.now() - lastSyncData.timestamp > 24 * 60 * 60 * 1000
+        : false;
 
     // Close on outside click
     useEffect(() => {
@@ -69,12 +101,56 @@ export default function CommandMenu({ onSelect, activePanel }) {
         }
     }, [isOpen]);
 
+    const handleVaultExport = async () => {
+        if (vaultExporting) return;
+        setVaultExporting(true);
+        try {
+            console.log('📦 Vault: Fetching export data...');
+            const data = await exportVault();
+            if (!data.nodes || data.nodes.length === 0) {
+                addToast({ type: 'danger', icon: '✕', message: 'No knowledge nodes to export', duration: 3000 });
+                setVaultExporting(false);
+                return;
+            }
+            console.log(`📦 Vault: Got ${data.nodes.length} nodes, ${data.edges?.length || 0} edges. Generating ZIP...`);
+            const result = await generateVaultZip(data);
+            setVaultDone(true);
+            console.log(`📦 Vault: Export complete! ${result.nodeCount} nodes exported.`);
+            // Save sync state
+            localStorage.setItem('feynman_vault_last_sync', JSON.stringify({
+                timestamp: Date.now(),
+                nodeCount: result.nodeCount,
+            }));
+            addToast({ type: 'success', icon: '✦', message: `Exported ${result.nodeCount} nodes as Markdown vault`, duration: 4000 });
+            setTimeout(() => setVaultDone(false), 3000);
+        } catch (err) {
+            console.error('📦 Vault export error:', err);
+            addToast({ type: 'danger', icon: '✕', message: 'Export failed — ' + (err?.message || 'Unknown error'), duration: 4000 });
+        } finally {
+            setVaultExporting(false);
+        }
+    };
+
     const handleItemClick = (id) => {
+        if (id === 'vault') {
+            handleVaultExport();
+            return; // Don't close menu — show loading state
+        }
+        if (id === 'import') {
+            setIsOpen(false);
+            setShowImportModal(true);
+            return;
+        }
         setIsOpen(false);
         onSelect(id);
     };
 
     return (
+        <>
+        <VaultImportModal
+            isOpen={showImportModal}
+            onClose={() => setShowImportModal(false)}
+        />
         <div
             ref={menuRef}
             style={{
@@ -209,6 +285,42 @@ export default function CommandMenu({ onSelect, activePanel }) {
                                         </div>
                                     )}
 
+                                    {/* Vault export status */}
+                                    {item.id === 'vault' && vaultExporting && (
+                                        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+                                            <motion.div
+                                                animate={{ rotate: 360 }}
+                                                transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                                                style={{ width: '14px', height: '14px', border: '2px solid rgba(0,255,136,0.15)', borderTop: '2px solid #00ff88', borderRadius: '50%' }}
+                                            />
+                                        </div>
+                                    )}
+                                    {item.id === 'vault' && vaultDone && !vaultExporting && (
+                                        <motion.div
+                                            initial={{ scale: 0 }} animate={{ scale: 1 }}
+                                            style={{ marginLeft: 'auto', width: '16px', height: '16px', borderRadius: '50%', background: 'rgba(0,255,136,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        >
+                                            <span style={{ color: '#00ff88', fontSize: '10px', fontWeight: 700 }}>✓</span>
+                                        </motion.div>
+                                    )}
+                                    {/* Vault out-of-sync indicator */}
+                                    {item.id === 'vault' && vaultOutOfSync && !vaultExporting && !vaultDone && (
+                                        <div style={{
+                                            marginLeft: 'auto',
+                                            fontFamily: fontMono,
+                                            fontSize: '8px',
+                                            fontWeight: 700,
+                                            color: '#ffaa00',
+                                            background: 'rgba(255, 170, 0, 0.1)',
+                                            padding: '2px 5px',
+                                            borderRadius: '4px',
+                                            border: '1px solid rgba(255, 170, 0, 0.2)',
+                                            letterSpacing: '0.5px',
+                                        }}>
+                                            SYNC
+                                        </div>
+                                    )}
+
                                     {/* Active indicator dot */}
                                     {isActive && (
                                         <motion.div
@@ -294,5 +406,6 @@ export default function CommandMenu({ onSelect, activePanel }) {
                 )}
             </motion.button>
         </div>
+        </>
     );
 }

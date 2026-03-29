@@ -325,6 +325,27 @@ export default function ChatPanel({ isOpen = false, onClose }) {
                             borderBottom: '1px solid rgba(0, 212, 255, 0.08)',
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                {/* Back button */}
+                                <motion.button
+                                    onClick={onClose}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    title="Back to Brain"
+                                    style={{
+                                        width: '32px', height: '32px', borderRadius: '10px',
+                                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                                        background: 'rgba(255, 255, 255, 0.03)',
+                                        color: '#4a9eba', cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        flexShrink: 0, transition: 'all 0.2s',
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0, 212, 255, 0.3)'; e.currentTarget.style.color = '#00d4ff'; e.currentTarget.style.background = 'rgba(0, 212, 255, 0.08)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)'; e.currentTarget.style.color = '#4a9eba'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'; }}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                        <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                </motion.button>
                                 <div style={{
                                     width: '8px', height: '8px', borderRadius: '50%',
                                     background: '#00d4ff',
@@ -363,6 +384,34 @@ export default function ChatPanel({ isOpen = false, onClose }) {
                                     }}
                                 >
                                     {isExpanded ? '⇋' : '⇔'}
+                                </motion.button>
+
+                                {/* Close / Back button */}
+                                <motion.button
+                                    onClick={onClose}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    title="Close chat"
+                                    style={{
+                                        width: '28px',
+                                        height: '28px',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                                        background: 'rgba(255, 255, 255, 0.03)',
+                                        color: '#4a5568',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flexShrink: 0,
+                                        transition: 'all 0.2s ease',
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(244, 63, 94, 0.3)'; e.currentTarget.style.color = '#f43f5e'; e.currentTarget.style.background = 'rgba(244, 63, 94, 0.08)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)'; e.currentTarget.style.color = '#4a5568'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'; }}
+                                >
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                        <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                                    </svg>
                                 </motion.button>
                             </div>
 

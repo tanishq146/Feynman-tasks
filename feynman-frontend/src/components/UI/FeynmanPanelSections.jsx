@@ -44,6 +44,8 @@ export const Icons = {
     collapse: (c = '#00d4ff', s = 14) => <svg style={svgStyle} width={s} height={s} viewBox="0 0 16 16" fill="none"><polyline points="5,1 5,5 1,5" stroke={c} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/><polyline points="11,15 11,11 15,11" stroke={c} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>,
     close: (c = '#4a9eba', s = 14) => <svg style={svgStyle} width={s} height={s} viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke={c} strokeWidth="1.3" strokeLinecap="round"/></svg>,
     review: (c = '#00d4ff', s = 14) => <svg style={svgStyle} width={s} height={s} viewBox="0 0 16 16" fill="none"><path d="M2 12V4a1 1 0 011-1h10a1 1 0 011 1v6a1 1 0 01-1 1H5l-3 2z" stroke={c} strokeWidth="1.2" fill={`${c}08`}/><circle cx="6" cy="7" r="0.7" fill={c} opacity="0.6"/><circle cx="8" cy="7" r="0.7" fill={c} opacity="0.6"/><circle cx="10" cy="7" r="0.7" fill={c} opacity="0.6"/></svg>,
+    edit: (c = '#00d4ff', s = 14) => <svg style={svgStyle} width={s} height={s} viewBox="0 0 16 16" fill="none"><path d="M11.5 2.5l2 2L5 13H3v-2l8.5-8.5z" stroke={c} strokeWidth="1.2" strokeLinejoin="round"/><path d="M9.5 4.5l2 2" stroke={c} strokeWidth="1.2"/></svg>,
+    download: (c = '#00d4ff', s = 14) => <svg style={svgStyle} width={s} height={s} viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 8l3 3 3-3" stroke={c} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 12h10" stroke={c} strokeWidth="1.3" strokeLinecap="round"/></svg>,
 };
 
 /* ═══ Glassmorphic Card ═══ */

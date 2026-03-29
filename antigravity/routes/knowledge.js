@@ -267,6 +267,73 @@ router.get('/fading', async (req, res, next) => {
 });
 
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GET /api/knowledge/export
+// Export all nodes as a JSON payload for vault/markdown generation.
+// The frontend generates the actual .md files and ZIP.
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/export', async (req, res, next) => {
+    try {
+        const userId = req.user.uid;
+
+        // Fetch all nodes
+        const { data: nodes, error: nodesError } = await supabase
+            .from('knowledge_nodes')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+
+        if (nodesError) throw nodesError;
+
+        // Fetch all edges
+        const { data: edges, error: edgesError } = await supabase
+            .from('connection_edges')
+            .select('*')
+            .eq('user_id', userId);
+
+        if (edgesError) throw edgesError;
+
+        // Fetch all personal notes
+        const { data: notes } = await supabase
+            .from('node_notes')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: true });
+
+        // Fetch user goals
+        const { data: goals } = await supabase
+            .from('user_goals')
+            .select('goal_text, created_at')
+            .eq('user_id', userId);
+
+        // Map notes to their nodes
+        const notesByNode = {};
+        (notes || []).forEach(note => {
+            if (!notesByNode[note.node_id]) notesByNode[note.node_id] = [];
+            notesByNode[note.node_id].push(note);
+        });
+
+        const enriched = (nodes || []).map(n => ({
+            ...enrichNodeWithStrength(n),
+            personal_notes: notesByNode[n.id] || [],
+        }));
+
+        res.json({
+            exported_at: new Date().toISOString(),
+            node_count: enriched.length,
+            edge_count: (edges || []).length,
+            nodes: enriched,
+            edges: edges || [],
+            goals: (goals || []).map(g => g.goal_text),
+        });
+    } catch (err) {
+        next(err);
+    }
+});
+
+
 // ═══════════════════════════════════════════════════════════════════════════
 // GET /api/knowledge/:id
 // Returns a single node with full details including Feynman analysis.
@@ -394,6 +461,132 @@ router.post('/:id/review', async (req, res, next) => {
         next(err);
     }
 });
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PUT /api/knowledge/:id
+// Edit a knowledge node's raw content. Re-runs AI analysis to update
+// title, summary, tags, and brain_region to stay in sync.
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.put('/:id', async (req, res, next) => {
+    try {
+        const nodeId = req.params.id;
+        const userId = req.user.uid;
+        const { content } = req.body;
+
+        if (!content || typeof content !== 'string' || content.trim().length === 0) {
+            return res.status(400).json({ error: 'Content is required' });
+        }
+
+        // Verify the node exists and belongs to this user
+        const { data: existing, error: fetchError } = await supabase
+            .from('knowledge_nodes')
+            .select('*')
+            .eq('id', nodeId)
+            .eq('user_id', userId)
+            .single();
+
+        if (fetchError) {
+            if (fetchError.code === 'PGRST116') return res.status(404).json({ error: 'Not found' });
+            throw fetchError;
+        }
+
+        const rawContent = content.trim();
+
+        // Re-run AI classification on the new content
+        console.log(`✏️  Re-analyzing edited node "${existing.title}"...`);
+        const analysis = await analyzeAndClassify(rawContent);
+
+        // Update the node
+        const { data: updated, error: updateError } = await supabase
+            .from('knowledge_nodes')
+            .update({
+                raw_content: rawContent,
+                title: analysis.title,
+                summary: analysis.summary,
+                topic_category: analysis.topic_category,
+                brain_region: analysis.brain_region,
+                tags: analysis.tags,
+                decay_rate: analysis.decay_rate,
+            })
+            .eq('id', nodeId)
+            .select()
+            .single();
+
+        if (updateError) throw updateError;
+
+        const enriched = enrichNodeWithStrength(updated);
+        broadcast('node.updated', enriched);
+
+        console.log(`✅ Node edited: "${enriched.title}" [${enriched.brain_region}]`);
+        res.json(enriched);
+
+        // Async: Re-generate Feynman analysis for the updated content
+        (async () => {
+            try {
+                const { data: edges } = await supabase
+                    .from('connection_edges')
+                    .select('target_node_id, source_node_id')
+                    .or(`source_node_id.eq.${nodeId},target_node_id.eq.${nodeId}`);
+
+                const connectedNodeIds = (edges || []).map(e =>
+                    e.source_node_id === nodeId ? e.target_node_id : e.source_node_id
+                );
+
+                let connectedNodes = [];
+                if (connectedNodeIds.length > 0) {
+                    const { data } = await supabase
+                        .from('knowledge_nodes')
+                        .select('id, title, summary')
+                        .in('id', connectedNodeIds);
+                    connectedNodes = data || [];
+                }
+
+                const { data: goals } = await supabase
+                    .from('user_goals')
+                    .select('goal_text')
+                    .eq('user_id', userId);
+
+                const feynman = await generateFeynmanAnalysis(updated, connectedNodes, goals || []);
+                const connectedTitles = connectedNodes.map(n => n.title);
+
+                let extras = {};
+                try {
+                    extras = await generateFeynmanExtras(updated, connectedTitles);
+                } catch (e) {
+                    console.error('⚠ Extras failed (non-blocking):', e.message);
+                }
+
+                const fullFeynman = {
+                    ...feynman,
+                    challenge_question: extras.challenge_question || null,
+                    knowledge_gaps: extras.knowledge_gaps || [],
+                    real_life_moment: extras.real_life_moment || null,
+                    challenge_attempts: existing.feynman?.challenge_attempts || [],
+                    teach_attempts: existing.feynman?.teach_attempts || [],
+                    feynman_certified: existing.feynman?.feynman_certified || false,
+                    is_crucial: existing.feynman?.is_crucial || false,
+                };
+
+                await supabase
+                    .from('knowledge_nodes')
+                    .update({ feynman: fullFeynman })
+                    .eq('id', nodeId);
+
+                broadcast('feynman.ready', { node_id: nodeId, feynman: fullFeynman });
+                console.log(`🎓 Feynman re-analysis complete for edited node "${updated.title}"`);
+            } catch (err) {
+                console.error('❌ Async re-analysis error:', err.message);
+            }
+        })();
+
+    } catch (err) {
+        next(err);
+    }
+});
+
+
 
 
 // ═══════════════════════════════════════════════════════════════════════════
