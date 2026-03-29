@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import BrainScene from './components/Brain/BrainScene';
 import InputBar from './components/UI/InputBar';
 import TopBar from './components/UI/TopBar';
@@ -13,6 +14,7 @@ import NodeDive from './components/UI/NodeDive';
 import LobeView from './components/UI/LobeView';
 import LobeDiveTransition from './components/UI/LobeDiveTransition';
 import NotesPanel from './components/UI/NotesPanel';
+import NotesWorkspace from './components/UI/NotesWorkspace';
 import Toast from './components/UI/Toast';
 
 import AuthScreen from './components/UI/AuthScreen';
@@ -42,9 +44,10 @@ function FeynmanApp() {
   const [beliefPanelOpen, setBeliefPanelOpen] = useState(false);
   const [studyModeOpen, setStudyModeOpen] = useState(false);
   const [studyPrefilteredIds, setStudyPrefilteredIds] = useState(null);
+  const [notesWorkspaceOpen, setNotesWorkspaceOpen] = useState(false);
 
   // Track which panel is currently active for the menu indicator
-  const activePanel = chatOpen ? 'chat' : beliefPanelOpen ? 'beliefs' : studyModeOpen ? 'study' : null;
+  const activePanel = chatOpen ? 'chat' : beliefPanelOpen ? 'beliefs' : studyModeOpen ? 'study' : notesWorkspaceOpen ? 'notes' : null;
 
   const handleStudyFromWarning = useCallback((nodeIds) => {
     setStudyPrefilteredIds(nodeIds);
@@ -77,9 +80,17 @@ function FeynmanApp() {
       if (!studyModeOpen) {
         setChatOpen(false);
         setBeliefPanelOpen(false);
+        setNotesWorkspaceOpen(false);
+      }
+    } else if (id === 'notes') {
+      setNotesWorkspaceOpen(prev => !prev);
+      if (!notesWorkspaceOpen) {
+        setChatOpen(false);
+        setBeliefPanelOpen(false);
+        setStudyModeOpen(false);
       }
     }
-  }, [chatOpen, beliefPanelOpen, studyModeOpen]);
+  }, [chatOpen, beliefPanelOpen, studyModeOpen, notesWorkspaceOpen]);
 
   return (
     <div
@@ -162,6 +173,13 @@ function FeynmanApp() {
         />
       )}
       <NotesPanel />
+
+      {/* Notes Workspace — full screen */}
+      <AnimatePresence>
+        {notesWorkspaceOpen && (
+          <NotesWorkspace isOpen={notesWorkspaceOpen} onClose={() => setNotesWorkspaceOpen(false)} />
+        )}
+      </AnimatePresence>
 
 
 

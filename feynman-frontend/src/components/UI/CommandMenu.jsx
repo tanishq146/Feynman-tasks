@@ -41,6 +41,15 @@ const menuItems = [
         colorBorder: 'rgba(124, 58, 237, 0.15)',
     },
     {
+        id: 'notes',
+        icon: '📓',
+        label: 'Notes',
+        description: 'Full Workspace',
+        color: '#f59e0b',
+        colorBg: 'rgba(245, 158, 11, 0.08)',
+        colorBorder: 'rgba(245, 158, 11, 0.15)',
+    },
+    {
         id: 'vault',
         icon: '📦',
         label: 'Vault',
