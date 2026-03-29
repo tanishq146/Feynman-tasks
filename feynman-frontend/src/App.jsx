@@ -63,34 +63,27 @@ function FeynmanApp() {
   const handleMenuSelect = useCallback((id) => {
     if (id === 'chat') {
       setChatOpen(prev => !prev);
-      // Close other panels when opening chat
-      if (!chatOpen) {
-        setBeliefPanelOpen(false);
-        setStudyModeOpen(false);
-      }
+      setBeliefPanelOpen(false);
+      setStudyModeOpen(false);
+      setNotesWorkspaceOpen(false);
     } else if (id === 'beliefs') {
       setBeliefPanelOpen(prev => !prev);
-      if (!beliefPanelOpen) {
-        setChatOpen(false);
-        setStudyModeOpen(false);
-      }
+      setChatOpen(false);
+      setStudyModeOpen(false);
+      setNotesWorkspaceOpen(false);
     } else if (id === 'study') {
       setStudyPrefilteredIds(null);
       setStudyModeOpen(prev => !prev);
-      if (!studyModeOpen) {
-        setChatOpen(false);
-        setBeliefPanelOpen(false);
-        setNotesWorkspaceOpen(false);
-      }
+      setChatOpen(false);
+      setBeliefPanelOpen(false);
+      setNotesWorkspaceOpen(false);
     } else if (id === 'notes') {
       setNotesWorkspaceOpen(prev => !prev);
-      if (!notesWorkspaceOpen) {
-        setChatOpen(false);
-        setBeliefPanelOpen(false);
-        setStudyModeOpen(false);
-      }
+      setChatOpen(false);
+      setBeliefPanelOpen(false);
+      setStudyModeOpen(false);
     }
-  }, [chatOpen, beliefPanelOpen, studyModeOpen, notesWorkspaceOpen]);
+  }, []);
 
   return (
     <div
