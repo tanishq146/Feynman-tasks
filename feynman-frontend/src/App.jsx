@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import { AnimatePresence } from 'framer-motion';
 import BrainScene from './components/Brain/BrainScene';
 import InputBar from './components/UI/InputBar';
 import TopBar from './components/UI/TopBar';
@@ -168,11 +167,7 @@ function FeynmanApp() {
       <NotesPanel />
 
       {/* Notes Workspace — full screen */}
-      <AnimatePresence>
-        {notesWorkspaceOpen && (
-          <NotesWorkspace isOpen={notesWorkspaceOpen} onClose={() => setNotesWorkspaceOpen(false)} />
-        )}
-      </AnimatePresence>
+      <NotesWorkspace isOpen={notesWorkspaceOpen} onClose={() => setNotesWorkspaceOpen(false)} />
 
 
 

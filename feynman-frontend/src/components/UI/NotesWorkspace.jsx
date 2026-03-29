@@ -523,15 +523,13 @@ export default function NotesWorkspace({ isOpen, onClose }) {
     if (!isOpen) return null;
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+        <div
             style={{
                 position: 'fixed', inset: 0, zIndex: 300,
                 background: '#020814',
                 display: 'flex',
                 fontFamily: font,
+                animation: 'notesWorkspaceFadeIn 0.3s ease',
             }}
         >
             {/* ═══ SIDEBAR ═══════════════════════════════════════════════════ */}
@@ -973,6 +971,12 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                     </div>
                 )}
             </div>
-        </motion.div>
+            <style>{`
+                @keyframes notesWorkspaceFadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+            `}</style>
+        </div>
     );
 }
