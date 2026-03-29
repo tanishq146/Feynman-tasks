@@ -137,8 +137,9 @@ function SidebarNote({ note, isActive, onClick }) {
                         </span>
                     )}
                     {note.voice_urls?.length > 0 && (
-                        <span style={{ fontSize: '9px', color: 'rgba(0, 212, 255, 0.5)' }}>
-                            🎤 {note.voice_urls.length}
+                        <span style={{ fontSize: '9px', color: 'rgba(0, 212, 255, 0.5)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/></svg>
+                            {note.voice_urls.length}
                         </span>
                     )}
                 </div>
@@ -299,16 +300,35 @@ export default function NotesWorkspace({ isOpen, onClose }) {
 
     // ─── Create Note ────────────────────────────────────────────────────
     const handleNewNote = async () => {
+        // Optimistic: add note to UI immediately with temp ID
+        const tempId = `temp-${Date.now()}`;
+        const now = new Date().toISOString();
+        const tempNote = {
+            id: tempId,
+            title: 'Untitled',
+            content: '',
+            images: [],
+            voice_urls: [],
+            is_pinned: false,
+            created_at: now,
+            updated_at: now,
+        };
+        setNotes(prev => [tempNote, ...prev]);
+        setActiveNoteId(tempId);
+
         try {
             const res = await api.post('/api/workspace/notes', {
                 title: 'Untitled',
                 content: '',
             });
             const newNote = res.data.note;
-            setNotes(prev => [newNote, ...prev]);
+            // Replace temp note with real note from server
+            setNotes(prev => prev.map(n => n.id === tempId ? newNote : n));
             setActiveNoteId(newNote.id);
         } catch (err) {
             console.error('Failed to create note:', err);
+            addToast({ type: 'danger', icon: '✕', message: 'Failed to save note to server', duration: 3000 });
+            // Keep the local note so user doesn't lose their place
         }
     };
 
@@ -402,7 +422,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                         const note = notes.find(n => n.id === activeNoteId);
                         const newVoice = [...(note?.voice_urls || []), res.data.url];
                         await saveNote(activeNoteId, { voice_urls: newVoice });
-                        addToast({ type: 'success', icon: '🎤', message: `Voice note saved (${result.duration}s)`, duration: 3000 });
+                        addToast({ type: 'success', icon: '◉', message: `Voice note saved (${result.duration}s)`, duration: 3000 });
                     } catch (err) {
                         console.error('Voice upload failed:', err);
                     }
@@ -700,7 +720,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                             {duration}s
                                         </span>
                                     </>
-                                ) : '🎤'}
+                                ) : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/></svg>}
                             </button>
 
                             {/* AI Analyze */}
@@ -807,7 +827,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                                 background: 'rgba(0, 212, 255, 0.04)',
                                                 border: '1px solid rgba(0, 212, 255, 0.1)',
                                             }}>
-                                                <span style={{ fontSize: '14px' }}>🎤</span>
+                                                <span style={{ display: 'flex', alignItems: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/></svg></span>
                                                 <audio src={url} controls style={{ height: '28px', maxWidth: '180px' }} />
                                                 <button
                                                     onClick={() => handleRemoveVoice(url)}
