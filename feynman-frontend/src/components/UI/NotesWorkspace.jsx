@@ -405,8 +405,9 @@ function VoicePlayer({ url, index, onRemove }) {
 
     return (
         <div style={{
-            display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px',
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '10px',
             background: 'rgba(0, 212, 255, 0.03)', border: '1px solid rgba(0, 212, 255, 0.08)', transition: 'background 0.2s',
+            overflow: 'hidden',
         }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(0, 212, 255, 0.06)'}
            onMouseLeave={e => e.currentTarget.style.background = 'rgba(0, 212, 255, 0.03)'}>
             <audio ref={audioRef} src={objectUrl} preload="auto"
@@ -414,24 +415,24 @@ function VoicePlayer({ url, index, onRemove }) {
                 onEnded={() => { setPlaying(false); setProgress(0); }} style={{ display: 'none' }} />
             {/* Play/Pause */}
             <button onClick={togglePlay} style={{
-                width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
+                width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
                 background: playing ? 'rgba(0,212,255,0.15)' : 'rgba(0,212,255,0.08)',
                 border: '1px solid rgba(0,212,255,0.2)', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00d4ff',
             }}>
                 {playing ? (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="#00d4ff"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="#00d4ff"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
                 ) : (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="#00d4ff"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="#00d4ff"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 )}
             </button>
-            <span style={{ fontFamily: fontMono, fontSize: '10px', color: 'rgba(0,212,255,0.6)', flexShrink: 0, width: '50px' }}>
-                Voice {index + 1}
+            <span style={{ fontFamily: fontMono, fontSize: '9px', color: 'rgba(0,212,255,0.6)', flexShrink: 0 }}>
+                {index + 1}
             </span>
             {/* Progress bar */}
             <div onClick={seek} style={{
-                flex: 1, height: '6px', background: 'rgba(0,212,255,0.08)', borderRadius: '3px',
-                cursor: 'pointer', position: 'relative', minWidth: '80px',
+                flex: 1, height: '5px', background: 'rgba(0,212,255,0.08)', borderRadius: '3px',
+                cursor: 'pointer', position: 'relative', minWidth: 0,
             }}>
                 <div style={{
                     width: audioDuration ? `${(progress / audioDuration) * 100}%` : '0%',
@@ -439,20 +440,18 @@ function VoicePlayer({ url, index, onRemove }) {
                     background: 'linear-gradient(90deg, #00d4ff, #8b5cf6)', transition: playing ? 'none' : 'width 0.1s',
                 }} />
             </div>
-            <span style={{ fontFamily: fontMono, fontSize: '9px', color: 'rgba(0,212,255,0.4)', flexShrink: 0, width: '32px', textAlign: 'right' }}>
+            <span style={{ fontFamily: fontMono, fontSize: '9px', color: 'rgba(0,212,255,0.4)', flexShrink: 0 }}>
                 {audioDuration ? fmtTime(audioDuration) : '--:--'}
             </span>
             {/* Volume */}
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(0,212,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-            </svg>
             <input type="range" min="0" max="2" step="0.1" value={volume}
                 onChange={e => setVolume(parseFloat(e.target.value))}
-                style={{ width: '50px', accentColor: '#00d4ff', flexShrink: 0 }} />
+                title={`Volume: ${Math.round(volume * 100)}%`}
+                style={{ width: '40px', accentColor: '#00d4ff', flexShrink: 0 }} />
             <button onClick={() => onRemove(index)} title="Remove voice note"
                 style={{
-                    background: 'none', border: 'none', color: 'rgba(244, 63, 94, 0.4)', fontSize: '12px',
-                    cursor: 'pointer', padding: '4px', flexShrink: 0, transition: 'color 0.2s',
+                    background: 'none', border: 'none', color: 'rgba(244, 63, 94, 0.4)', fontSize: '11px',
+                    cursor: 'pointer', padding: '2px', flexShrink: 0, transition: 'color 0.2s',
                 }}
                 onMouseEnter={e => e.currentTarget.style.color = '#f43f5e'}
                 onMouseLeave={e => e.currentTarget.style.color = 'rgba(244, 63, 94, 0.4)'}
