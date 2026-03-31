@@ -34,14 +34,16 @@ function useVoiceRecorder() {
     const start = useCallback(async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const recorder = new MediaRecorder(stream, {
-                mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4',
-            });
+            // Pick best supported mime type for playback compatibility
+            const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
+                .find(m => MediaRecorder.isTypeSupported(m)) || '';
+            const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
             chunks.current = [];
             recorder.ondataavailable = (e) => {
                 if (e.data.size > 0) chunks.current.push(e.data);
             };
-            recorder.start();
+            // Use timeslice (250ms) so data arrives in chunks during recording
+            recorder.start(250);
             mediaRecorder.current = recorder;
             startTime.current = Date.now();
             setRecording(true);
@@ -62,15 +64,14 @@ function useVoiceRecorder() {
             }
             clearInterval(timer.current);
             mediaRecorder.current.onstop = () => {
-                const blob = new Blob(chunks.current, {
-                    type: mediaRecorder.current.mimeType || 'audio/webm',
-                });
+                const mimeType = mediaRecorder.current.mimeType || 'audio/webm';
+                const blob = new Blob(chunks.current, { type: mimeType });
                 // Stop all tracks
                 mediaRecorder.current.stream.getTracks().forEach(t => t.stop());
                 setRecording(false);
                 const dur = Math.floor((Date.now() - startTime.current) / 1000);
                 setDuration(dur);
-                resolve({ blob, duration: dur, mimeType: mediaRecorder.current.mimeType });
+                resolve({ blob, duration: dur, mimeType });
             };
             mediaRecorder.current.stop();
         });
@@ -218,9 +219,202 @@ function AISuggestion({ suggestion, onApprove, onDismiss, approving }) {
     );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// MAIN COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════
+// ─── Draggable / Resizable Image ────────────────────────────────────────────
+
+function DraggableImage({ imgData, index, onUpdate, onRemove }) {
+    // imgData can be a string (legacy URL) or object { url, x, y, w, h }
+    const isObj = typeof imgData === 'object' && imgData !== null;
+    const url = isObj ? imgData.url : imgData;
+    const x = isObj ? (imgData.x || 0) : 0;
+    const y = isObj ? (imgData.y || 0) : 0;
+    const w = isObj ? (imgData.w || 220) : 220;
+    const h = isObj ? (imgData.h || 165) : 165;
+
+    const containerRef = useRef(null);
+    const dragging = useRef(false);
+    const resizing = useRef(false);
+    const startPos = useRef({ mx: 0, my: 0, ox: 0, oy: 0, ow: 0, oh: 0 });
+
+    const onMouseDownDrag = (e) => {
+        if (e.target.dataset.resize) return;
+        e.preventDefault();
+        dragging.current = true;
+        startPos.current = { mx: e.clientX, my: e.clientY, ox: x, oy: y };
+        const onMove = (ev) => {
+            if (!dragging.current) return;
+            const dx = ev.clientX - startPos.current.mx;
+            const dy = ev.clientY - startPos.current.my;
+            onUpdate(index, { x: startPos.current.ox + dx, y: startPos.current.oy + dy, w, h, url });
+        };
+        const onUp = () => { dragging.current = false; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+    };
+
+    const onMouseDownResize = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        resizing.current = true;
+        startPos.current = { mx: e.clientX, my: e.clientY, ow: w, oh: h, ox: x, oy: y };
+        const onMove = (ev) => {
+            if (!resizing.current) return;
+            const dx = ev.clientX - startPos.current.mx;
+            const dy = ev.clientY - startPos.current.my;
+            const nw = Math.max(100, startPos.current.ow + dx);
+            const nh = Math.max(75, startPos.current.oh + dy);
+            onUpdate(index, { x, y, w: nw, h: nh, url });
+        };
+        const onUp = () => { resizing.current = false; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+    };
+
+    return (
+        <div
+            ref={containerRef}
+            onMouseDown={onMouseDownDrag}
+            style={{
+                position: 'absolute', left: x, top: y, width: w, height: h,
+                borderRadius: '10px', overflow: 'visible', cursor: 'grab',
+                border: '1px solid rgba(139, 92, 246, 0.2)',
+                boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+                zIndex: 5, transition: dragging.current || resizing.current ? 'none' : 'box-shadow 0.2s',
+                userSelect: 'none',
+            }}
+        >
+            <img src={url} alt={`Image ${index + 1}`} draggable={false}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px', display: 'block', pointerEvents: 'none' }} />
+            {/* Remove button */}
+            <button onClick={(e) => { e.stopPropagation(); onRemove(index); }}
+                style={{
+                    position: 'absolute', top: -8, right: -8, width: '22px', height: '22px', borderRadius: '50%',
+                    background: 'rgba(244,63,94,0.9)', border: '2px solid #020814', color: '#fff',
+                    fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 10, fontWeight: 700,
+                }}>✕</button>
+            {/* Resize handle — bottom-right corner */}
+            <div data-resize="true" onMouseDown={onMouseDownResize}
+                style={{
+                    position: 'absolute', bottom: -4, right: -4, width: '14px', height: '14px',
+                    background: 'rgba(139,92,246,0.8)', borderRadius: '3px', cursor: 'nwse-resize',
+                    border: '2px solid #020814', zIndex: 10,
+                }} />
+            {/* Size label */}
+            <div style={{
+                position: 'absolute', bottom: 4, left: 6,
+                fontFamily: fontMono, fontSize: '8px', color: 'rgba(255,255,255,0.4)',
+                background: 'rgba(0,0,0,0.5)', padding: '1px 4px', borderRadius: '3px',
+                pointerEvents: 'none',
+            }}>{Math.round(w)}×{Math.round(h)}</div>
+        </div>
+    );
+}
+
+// ─── Audio Panel (dedicated voice notes section) ─────────────────────────────
+
+function VoicePlayer({ url, index, onRemove }) {
+    const audioRef = useRef(null);
+    const [playing, setPlaying] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [audioDuration, setAudioDuration] = useState(0);
+    const animRef = useRef(null);
+
+    // Create object URL from data URL for better playback
+    const [objectUrl, setObjectUrl] = useState(null);
+    useEffect(() => {
+        if (url && url.startsWith('data:')) {
+            try {
+                const [header, b64] = url.split(',');
+                const mime = header.match(/data:(.*?);/)?.[1] || 'audio/webm';
+                const binary = atob(b64);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                const blob = new Blob([bytes], { type: mime });
+                const objUrl = URL.createObjectURL(blob);
+                setObjectUrl(objUrl);
+                return () => URL.revokeObjectURL(objUrl);
+            } catch (e) {
+                console.error('Failed to create audio blob URL:', e);
+                setObjectUrl(url);
+            }
+        } else {
+            setObjectUrl(url);
+        }
+    }, [url]);
+
+    const tick = () => {
+        if (audioRef.current) {
+            setProgress(audioRef.current.currentTime);
+            if (!audioRef.current.paused) animRef.current = requestAnimationFrame(tick);
+        }
+    };
+
+    const togglePlay = () => {
+        if (!audioRef.current) return;
+        if (playing) { audioRef.current.pause(); setPlaying(false); }
+        else { audioRef.current.play().then(() => { setPlaying(true); animRef.current = requestAnimationFrame(tick); }).catch(() => {}); }
+    };
+
+    const seek = (e) => {
+        if (!audioRef.current || !audioDuration) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        audioRef.current.currentTime = pct * audioDuration;
+        setProgress(audioRef.current.currentTime);
+    };
+
+    const fmtTime = (s) => { const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}`; };
+
+    return (
+        <div style={{
+            display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px',
+            background: 'rgba(0, 212, 255, 0.03)', border: '1px solid rgba(0, 212, 255, 0.08)', transition: 'background 0.2s',
+        }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(0, 212, 255, 0.06)'}
+           onMouseLeave={e => e.currentTarget.style.background = 'rgba(0, 212, 255, 0.03)'}>
+            <audio ref={audioRef} src={objectUrl} preload="metadata"
+                onLoadedMetadata={() => setAudioDuration(audioRef.current?.duration || 0)}
+                onEnded={() => { setPlaying(false); setProgress(0); }} style={{ display: 'none' }} />
+            {/* Play/Pause */}
+            <button onClick={togglePlay} style={{
+                width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
+                background: playing ? 'rgba(0,212,255,0.15)' : 'rgba(0,212,255,0.08)',
+                border: '1px solid rgba(0,212,255,0.2)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00d4ff',
+            }}>
+                {playing ? (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="#00d4ff"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                ) : (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="#00d4ff"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                )}
+            </button>
+            <span style={{ fontFamily: fontMono, fontSize: '10px', color: 'rgba(0,212,255,0.6)', flexShrink: 0, width: '50px' }}>
+                Voice {index + 1}
+            </span>
+            {/* Progress bar */}
+            <div onClick={seek} style={{
+                flex: 1, height: '6px', background: 'rgba(0,212,255,0.08)', borderRadius: '3px',
+                cursor: 'pointer', position: 'relative', minWidth: '80px',
+            }}>
+                <div style={{
+                    width: audioDuration ? `${(progress / audioDuration) * 100}%` : '0%',
+                    height: '100%', borderRadius: '3px',
+                    background: 'linear-gradient(90deg, #00d4ff, #8b5cf6)', transition: playing ? 'none' : 'width 0.1s',
+                }} />
+            </div>
+            <span style={{ fontFamily: fontMono, fontSize: '9px', color: 'rgba(0,212,255,0.4)', flexShrink: 0, width: '32px', textAlign: 'right' }}>
+                {audioDuration ? fmtTime(audioDuration) : '--:--'}
+            </span>
+            <button onClick={() => onRemove(index)} title="Remove voice note"
+                style={{
+                    background: 'none', border: 'none', color: 'rgba(244, 63, 94, 0.4)', fontSize: '12px',
+                    cursor: 'pointer', padding: '4px', flexShrink: 0, transition: 'color 0.2s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = '#f43f5e'}
+                onMouseLeave={e => e.currentTarget.style.color = 'rgba(244, 63, 94, 0.4)'}
+            >✕</button>
+        </div>
+    );
+}
 
 export default function NotesWorkspace({ isOpen, onClose }) {
     const [notes, setNotes] = useState([]);
@@ -233,6 +427,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
     const [analyzing, setAnalyzing] = useState(false);
     const [approvingTitle, setApprovingTitle] = useState(null);
     const [dragOver, setDragOver] = useState(false);
+    const [showAudioPanel, setShowAudioPanel] = useState(false);
 
     const addToast = useBrainStore(s => s.addToast);
     const editorRef = useRef(null);
@@ -420,11 +615,13 @@ export default function NotesWorkspace({ isOpen, onClose }) {
             if (!file.type.startsWith('image/')) continue;
             const url = await uploadImage(file);
             if (url) {
-                // Read latest images from ref to avoid stale closure accumulation bugs
                 const latestNote = notesRef.current.find(n => n.id === currentNoteId);
-                const newImages = [...(latestNote?.images || []), url];
+                const existingImages = latestNote?.images || [];
+                const offset = existingImages.length * 30;
+                const newImg = { url, x: 20 + offset, y: 20 + offset, w: 220, h: 165 };
+                const newImages = [...existingImages, newImg];
                 await saveNote(currentNoteId, { images: newImages });
-                addToast({ type: 'success', icon: '✓', message: 'Image added', duration: 2000 });
+                addToast({ type: 'success', icon: '✓', message: 'Image added — drag to move, corner to resize', duration: 3000 });
             } else {
                 addToast({ type: 'danger', icon: '✕', message: 'Image upload failed', duration: 3000 });
             }
@@ -432,12 +629,44 @@ export default function NotesWorkspace({ isOpen, onClose }) {
         if (e.target?.value) e.target.value = '';
     };
 
+    // Update image position/size (called during drag/resize)
+    const imgSaveTimer = useRef(null);
+    const handleImageUpdate = useCallback((index, newData) => {
+        const currentNoteId = activeNoteIdRef.current;
+        if (!currentNoteId) return;
+        // Update local state immediately for smooth drag
+        setNotes(prev => prev.map(n => {
+            if (n.id !== currentNoteId) return n;
+            const imgs = [...(n.images || [])];
+            imgs[index] = newData;
+            return { ...n, images: imgs };
+        }));
+        // Debounced save to server
+        clearTimeout(imgSaveTimer.current);
+        imgSaveTimer.current = setTimeout(() => {
+            const latestNote = notesRef.current.find(n => n.id === currentNoteId);
+            if (latestNote) saveNote(currentNoteId, { images: latestNote.images });
+        }, 500);
+    }, [saveNote]);
+
+    const handleRemoveImageByIndex = async (index) => {
+        const currentNoteId = activeNoteIdRef.current;
+        if (!currentNoteId) return;
+        const latestNote = notesRef.current.find(n => n.id === currentNoteId);
+        if (!latestNote) return;
+        const newImages = (latestNote.images || []).filter((_, i) => i !== index);
+        await saveNote(currentNoteId, { images: newImages });
+    };
+
     const handleRemoveImage = async (url) => {
         const currentNoteId = activeNoteIdRef.current;
         if (!currentNoteId) return;
         const latestNote = notesRef.current.find(n => n.id === currentNoteId);
         if (!latestNote) return;
-        const newImages = (latestNote.images || []).filter(i => i !== url);
+        const newImages = (latestNote.images || []).filter(i => {
+            const imgUrl = typeof i === 'object' ? i.url : i;
+            return imgUrl !== url;
+        });
         await saveNote(currentNoteId, { images: newImages });
     };
 
@@ -460,6 +689,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                         const latestNote = notesRef.current.find(n => n.id === currentNoteId);
                         const newVoice = [...(latestNote?.voice_urls || []), res.data.url];
                         await saveNote(currentNoteId, { voice_urls: newVoice });
+                        setShowAudioPanel(true);
                         addToast({ type: 'success', icon: '◉', message: `Voice note saved (${result.duration}s)`, duration: 3000 });
                     } catch (err) {
                         console.error('Voice upload failed:', err);
@@ -473,12 +703,12 @@ export default function NotesWorkspace({ isOpen, onClose }) {
         }
     };
 
-    const handleRemoveVoice = async (url) => {
+    const handleRemoveVoice = async (index) => {
         const currentNoteId = activeNoteIdRef.current;
         if (!currentNoteId) return;
         const latestNote = notesRef.current.find(n => n.id === currentNoteId);
         if (!latestNote) return;
-        const newVoice = (latestNote.voice_urls || []).filter(v => v !== url);
+        const newVoice = (latestNote.voice_urls || []).filter((_, i) => i !== index);
         await saveNote(currentNoteId, { voice_urls: newVoice });
     };
 
@@ -834,98 +1064,29 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                     }}
                                 />
 
-                                {/* ═══ IMAGES — large inline gallery ═══ */}
+                                {/* ═══ CANVAS — freely drag/resize images here ═══ */}
                                 {activeNote.images?.length > 0 && (
-                                    <div style={{ padding: '12px 40px 4px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                                        {activeNote.images.map((url, i) => (
-                                            <div key={url} style={{
-                                                position: 'relative', borderRadius: '12px', overflow: 'hidden',
-                                                border: '1px solid rgba(139, 92, 246, 0.15)',
-                                                background: 'rgba(139, 92, 246, 0.04)',
-                                                transition: 'transform 0.2s, box-shadow 0.2s',
-                                                cursor: 'grab', flexShrink: 0,
-                                            }}
-                                                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.02)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(139,92,246,0.15)'; }}
-                                                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = 'none'; }}
-                                            >
-                                                <img
-                                                    src={url} alt={`Image ${i + 1}`}
-                                                    style={{
-                                                        width: '200px', height: '150px', objectFit: 'cover',
-                                                        display: 'block',
-                                                    }}
-                                                    onClick={() => window.open(url, '_blank')}
-                                                />
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleRemoveImage(url); }}
-                                                    style={{
-                                                        position: 'absolute', top: '6px', right: '6px',
-                                                        width: '22px', height: '22px', borderRadius: '50%',
-                                                        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-                                                        border: '1px solid rgba(255,255,255,0.1)', color: '#fff',
-                                                        fontSize: '10px', cursor: 'pointer',
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        opacity: 0.7, transition: 'opacity 0.2s',
-                                                    }}
-                                                    onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-                                                    onMouseLeave={e => e.currentTarget.style.opacity = '0.7'}
-                                                >✕</button>
-                                                <div style={{
-                                                    position: 'absolute', bottom: '0', left: '0', right: '0',
-                                                    padding: '16px 10px 6px', background: 'linear-gradient(transparent, rgba(0,0,0,0.5))',
-                                                    fontFamily: fontMono, fontSize: '9px', color: 'rgba(255,255,255,0.5)',
-                                                    letterSpacing: '0.5px',
-                                                }}>Image {i + 1}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* ═══ VOICE MESSAGES — dedicated playback area ═══ */}
-                                {activeNote.voice_urls?.length > 0 && (
-                                    <div style={{ padding: '8px 40px 4px' }}>
+                                    <div style={{
+                                        position: 'relative', minHeight: '250px', margin: '4px 24px',
+                                        borderRadius: '12px', border: '1px dashed rgba(139, 92, 246, 0.12)',
+                                        background: 'rgba(139, 92, 246, 0.02)', overflow: 'hidden',
+                                    }}>
+                                        {/* Canvas hint */}
                                         <div style={{
-                                            fontFamily: fontMono, fontSize: '9px', fontWeight: 600,
-                                            color: 'rgba(0, 212, 255, 0.4)', letterSpacing: '1.5px',
-                                            textTransform: 'uppercase', marginBottom: '8px',
-                                        }}>Voice Notes ({activeNote.voice_urls.length})</div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            {activeNote.voice_urls.map((url, i) => (
-                                                <div key={url} style={{
-                                                    display: 'flex', alignItems: 'center', gap: '10px',
-                                                    padding: '10px 14px', borderRadius: '10px',
-                                                    background: 'rgba(0, 212, 255, 0.03)',
-                                                    border: '1px solid rgba(0, 212, 255, 0.08)',
-                                                    transition: 'background 0.2s',
-                                                }}
-                                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0, 212, 255, 0.06)'}
-                                                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(0, 212, 255, 0.03)'}
-                                                >
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                                                        <rect x="9" y="2" width="6" height="11" rx="3" />
-                                                        <path d="M5 10a7 7 0 0 0 14 0" />
-                                                        <line x1="12" y1="17" x2="12" y2="22" />
-                                                    </svg>
-                                                    <span style={{ fontFamily: fontMono, fontSize: '10px', color: 'rgba(0,212,255,0.5)', flexShrink: 0, width: '60px' }}>Voice {i + 1}</span>
-                                                    <audio src={url} controls style={{
-                                                        flex: 1, height: '32px', maxWidth: '400px',
-                                                        filter: 'hue-rotate(180deg) saturate(0.6) brightness(0.8)',
-                                                    }} />
-                                                    <button
-                                                        onClick={() => handleRemoveVoice(url)}
-                                                        title="Remove voice note"
-                                                        style={{
-                                                            background: 'none', border: 'none',
-                                                            color: 'rgba(244, 63, 94, 0.4)', fontSize: '12px',
-                                                            cursor: 'pointer', padding: '4px', flexShrink: 0,
-                                                            transition: 'color 0.2s',
-                                                        }}
-                                                        onMouseEnter={e => e.currentTarget.style.color = '#f43f5e'}
-                                                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(244, 63, 94, 0.4)'}
-                                                    >✕</button>
-                                                </div>
-                                            ))}
-                                        </div>
+                                            position: 'absolute', top: 8, left: 12,
+                                            fontFamily: fontMono, fontSize: '8px', color: 'rgba(139,92,246,0.3)',
+                                            letterSpacing: '1px', textTransform: 'uppercase', pointerEvents: 'none',
+                                            zIndex: 1,
+                                        }}>📌 IMAGE CANVAS — drag to move, corner to resize</div>
+                                        {activeNote.images.map((imgData, i) => (
+                                            <DraggableImage
+                                                key={`img-${i}-${typeof imgData === 'object' ? imgData.url?.slice(-20) : String(imgData).slice(-20)}`}
+                                                imgData={imgData}
+                                                index={i}
+                                                onUpdate={handleImageUpdate}
+                                                onRemove={handleRemoveImageByIndex}
+                                            />
+                                        ))}
                                     </div>
                                 )}
 
@@ -945,6 +1106,39 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                         letterSpacing: '0.2px',
                                     }}
                                 />
+
+                                {/* ═══ AUDIO PANEL — dedicated voice notes section at bottom ═══ */}
+                                {activeNote.voice_urls?.length > 0 && (
+                                    <div style={{
+                                        borderTop: '1px solid rgba(0, 212, 255, 0.08)',
+                                        background: 'rgba(0, 212, 255, 0.02)',
+                                    }}>
+                                        {/* Toggle header */}
+                                        <button onClick={() => setShowAudioPanel(prev => !prev)} style={{
+                                            width: '100%', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '8px',
+                                            background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                                        }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <rect x="9" y="2" width="6" height="11" rx="3" /><path d="M5 10a7 7 0 0 0 14 0" /><line x1="12" y1="17" x2="12" y2="22" />
+                                            </svg>
+                                            <span style={{ fontFamily: fontMono, fontSize: '10px', fontWeight: 600, color: 'rgba(0,212,255,0.5)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+                                                Voice Notes ({activeNote.voice_urls.length})
+                                            </span>
+                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(0,212,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                                                style={{ marginLeft: 'auto', transform: showAudioPanel ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                                                <polyline points="6 9 12 15 18 9" />
+                                            </svg>
+                                        </button>
+                                        {/* Expanded panel */}
+                                        {showAudioPanel && (
+                                            <div style={{ padding: '0 24px 12px', display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto' }}>
+                                                {activeNote.voice_urls.map((url, i) => (
+                                                    <VoicePlayer key={`voice-${i}`} url={url} index={i} onRemove={handleRemoveVoice} />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             {/* AI Suggestions Panel */}
