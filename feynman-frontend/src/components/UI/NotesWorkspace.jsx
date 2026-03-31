@@ -1087,7 +1087,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                 />
 
                                 {/* ═══ BLOCK EDITOR — text + inline images like Obsidian ═══ */}
-                                <div style={{ flex: 1, padding: '8px 40px 40px', overflowY: 'auto' }}>
+                                <div style={{ flex: 1, minHeight: 0, padding: '8px 40px 40px', overflowY: 'auto' }}>
                                     {(() => {
                                         const content = activeNote.content || '';
                                         const images = activeNote.images || [];
@@ -1171,6 +1171,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                     <div style={{
                                         borderTop: '1px solid rgba(0, 212, 255, 0.08)',
                                         background: 'rgba(0, 212, 255, 0.02)',
+                                        flexShrink: 0,
                                     }}>
                                         {/* Toggle header */}
                                         <button onClick={() => setShowAudioPanel(prev => !prev)} style={{
