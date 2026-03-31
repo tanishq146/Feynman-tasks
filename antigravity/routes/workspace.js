@@ -208,6 +208,7 @@ router.post('/notes/:id/pin', async (req, res, next) => {
 // ═══════════════════════════════════════════════════════════════════════════
 // POST /api/workspace/upload/image
 // Upload an image for a workspace note
+// Stores as base64 data URL directly (no Supabase Storage dependency)
 // ═══════════════════════════════════════════════════════════════════════════
 
 router.post('/upload/image', async (req, res, next) => {
@@ -219,40 +220,28 @@ router.post('/upload/image', async (req, res, next) => {
             return res.status(400).json({ error: 'base64 and mimeType are required' });
         }
 
-        const base64Data = base64.includes(',') ? base64.split(',')[1] : base64;
-        const buffer = Buffer.from(base64Data, 'base64');
+        // Validate it's actually a data URL or raw base64
+        if (!base64.includes('base64')) {
+            return res.status(400).json({ error: 'Invalid base64 data' });
+        }
 
-        if (buffer.length > 5 * 1024 * 1024) {
+        // Validate size — the raw base64 string (before decoding) shouldn't exceed ~7MB
+        // (base64 is ~33% larger than binary)
+        if (base64.length > 7 * 1024 * 1024) {
             return res.status(400).json({ error: 'Image too large (max 5MB)' });
         }
 
-        const ext = mimeType.split('/')[1] || 'png';
-        const fileName = `${userId}/workspace/${uuid()}.${ext}`;
-
-        // Ensure bucket exists
-        const { data: buckets } = await supabase.storage.listBuckets();
-        const bucketExists = (buckets || []).some(b => b.name === 'note-images');
-        if (!bucketExists) {
-            await supabase.storage.createBucket('note-images', {
-                public: true,
-                fileSizeLimit: 5 * 1024 * 1024,
-                allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
-            });
+        // The data URL IS the image — store it directly
+        // Ensure it's a proper data URL format
+        let dataUrl = base64;
+        if (!dataUrl.startsWith('data:')) {
+            dataUrl = `data:${mimeType};base64,${base64}`;
         }
 
-        const { error } = await supabase.storage
-            .from('note-images')
-            .upload(fileName, buffer, { contentType: mimeType, upsert: false });
-
-        if (error) throw error;
-
-        const { data: urlData } = supabase.storage
-            .from('note-images')
-            .getPublicUrl(fileName);
-
-        console.log(`🖼️ Workspace image uploaded: ${fileName}`);
-        res.json({ url: urlData.publicUrl });
+        console.log(`🖼️ Workspace image received for user ${userId} (${Math.round(dataUrl.length / 1024)}KB)`);
+        res.json({ url: dataUrl });
     } catch (err) {
+        console.error('❌ Image upload error:', err);
         next(err);
     }
 });
@@ -261,6 +250,7 @@ router.post('/upload/image', async (req, res, next) => {
 // ═══════════════════════════════════════════════════════════════════════════
 // POST /api/workspace/upload/voice
 // Upload a voice recording for a workspace note
+// Stores as base64 data URL directly (no Supabase Storage dependency)
 // ═══════════════════════════════════════════════════════════════════════════
 
 router.post('/upload/voice', async (req, res, next) => {
@@ -272,40 +262,21 @@ router.post('/upload/voice', async (req, res, next) => {
             return res.status(400).json({ error: 'base64 audio data is required' });
         }
 
-        const base64Data = base64.includes(',') ? base64.split(',')[1] : base64;
-        const buffer = Buffer.from(base64Data, 'base64');
-
-        if (buffer.length > 10 * 1024 * 1024) {
+        // Validate size — base64 encoded audio shouldn't exceed ~14MB
+        if (base64.length > 14 * 1024 * 1024) {
             return res.status(400).json({ error: 'Audio too large (max 10MB)' });
         }
 
-        const ext = (mimeType || 'audio/webm').split('/')[1]?.split(';')[0] || 'webm';
-        const fileName = `${userId}/voice/${uuid()}.${ext}`;
-
-        // Ensure voice bucket exists
-        const { data: buckets } = await supabase.storage.listBuckets();
-        const bucketExists = (buckets || []).some(b => b.name === 'voice-notes');
-        if (!bucketExists) {
-            await supabase.storage.createBucket('voice-notes', {
-                public: true,
-                fileSizeLimit: 10 * 1024 * 1024,
-                allowedMimeTypes: ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav'],
-            });
+        // The data URL IS the audio — store it directly
+        let dataUrl = base64;
+        if (!dataUrl.startsWith('data:')) {
+            dataUrl = `data:${mimeType || 'audio/webm'};base64,${base64}`;
         }
 
-        const { error } = await supabase.storage
-            .from('voice-notes')
-            .upload(fileName, buffer, { contentType: mimeType || 'audio/webm', upsert: false });
-
-        if (error) throw error;
-
-        const { data: urlData } = supabase.storage
-            .from('voice-notes')
-            .getPublicUrl(fileName);
-
-        console.log(`🎤 Voice note uploaded: ${fileName} (${duration || '?'}s)`);
-        res.json({ url: urlData.publicUrl, duration });
+        console.log(`🎤 Voice note received for user ${userId} (${duration || '?'}s, ${Math.round(dataUrl.length / 1024)}KB)`);
+        res.json({ url: dataUrl, duration });
     } catch (err) {
+        console.error('❌ Voice upload error:', err);
         next(err);
     }
 });

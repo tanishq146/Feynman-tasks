@@ -408,9 +408,15 @@ export default function NotesWorkspace({ isOpen, onClose }) {
     const handleImageUpload = async (e) => {
         const files = Array.from(e.target.files || e.dataTransfer?.files || []);
         const currentNoteId = activeNoteIdRef.current;
-        if (!currentNoteId || String(currentNoteId).startsWith('temp-')) return;
+        if (!currentNoteId || String(currentNoteId).startsWith('temp-')) {
+            addToast({ type: 'danger', icon: '✕', message: 'Save the note first before adding images', duration: 3000 });
+            return;
+        }
         for (const file of files) {
-            if (file.size > 5 * 1024 * 1024) continue;
+            if (file.size > 5 * 1024 * 1024) {
+                addToast({ type: 'danger', icon: '✕', message: 'Image too large (max 5MB)', duration: 3000 });
+                continue;
+            }
             if (!file.type.startsWith('image/')) continue;
             const url = await uploadImage(file);
             if (url) {
@@ -418,6 +424,9 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                 const latestNote = notesRef.current.find(n => n.id === currentNoteId);
                 const newImages = [...(latestNote?.images || []), url];
                 await saveNote(currentNoteId, { images: newImages });
+                addToast({ type: 'success', icon: '✓', message: 'Image added', duration: 2000 });
+            } else {
+                addToast({ type: 'danger', icon: '✕', message: 'Image upload failed', duration: 3000 });
             }
         }
         if (e.target?.value) e.target.value = '';

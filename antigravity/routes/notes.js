@@ -24,58 +24,32 @@ const router = Router();
 router.post('/upload/image', async (req, res, next) => {
     try {
         const userId = req.user.uid;
-        const { base64, mimeType, nodeId } = req.body;
+        const { base64, mimeType } = req.body;
 
         if (!base64 || !mimeType) {
             return res.status(400).json({ error: 'base64 and mimeType are required' });
         }
 
-        // Convert base64 to buffer (strip data URL prefix if present)
-        const base64Data = base64.includes(',') ? base64.split(',')[1] : base64;
-        const buffer = Buffer.from(base64Data, 'base64');
+        // Validate it's actually a data URL or raw base64
+        if (!base64.includes('base64')) {
+            return res.status(400).json({ error: 'Invalid base64 data' });
+        }
 
-        // Check file size (max 5MB)
-        if (buffer.length > 5 * 1024 * 1024) {
+        // Validate size — the raw base64 string shouldn't exceed ~7MB
+        if (base64.length > 7 * 1024 * 1024) {
             return res.status(400).json({ error: 'Image too large (max 5MB)' });
         }
 
-        // Generate unique filename
-        const ext = mimeType.split('/')[1] || 'png';
-        const fileName = `${userId}/${nodeId || 'general'}/${uuid()}.${ext}`;
-
-        // Ensure the bucket exists (create if not)
-        const { data: buckets } = await supabase.storage.listBuckets();
-        const bucketExists = (buckets || []).some(b => b.name === 'note-images');
-        if (!bucketExists) {
-            await supabase.storage.createBucket('note-images', {
-                public: true,
-                fileSizeLimit: 5 * 1024 * 1024,
-                allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
-            });
-            console.log('📦 Created note-images storage bucket');
+        // The data URL IS the image — store it directly
+        let dataUrl = base64;
+        if (!dataUrl.startsWith('data:')) {
+            dataUrl = `data:${mimeType};base64,${base64}`;
         }
 
-        // Upload to Supabase Storage
-        const { data, error } = await supabase.storage
-            .from('note-images')
-            .upload(fileName, buffer, {
-                contentType: mimeType,
-                upsert: false,
-            });
-
-        if (error) throw error;
-
-        // Get the public URL
-        const { data: urlData } = supabase.storage
-            .from('note-images')
-            .getPublicUrl(fileName);
-
-        const publicUrl = urlData.publicUrl;
-        console.log(`🖼  Image uploaded: ${fileName}`);
-
-        res.json({ url: publicUrl, path: fileName });
+        console.log(`🖼  Image received for user ${userId} (${Math.round(dataUrl.length / 1024)}KB)`);
+        res.json({ url: dataUrl });
     } catch (err) {
-        console.error('Image upload error:', err);
+        console.error('❌ Image upload error:', err);
         next(err);
     }
 });
