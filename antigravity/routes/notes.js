@@ -118,8 +118,8 @@ router.post('/:nodeId', async (req, res, next) => {
         const { nodeId } = req.params;
         const { content, images } = req.body;
 
-        if (!content || typeof content !== 'string' || content.trim().length === 0) {
-            return res.status(400).json({ error: 'Content is required.' });
+        if ((!content || typeof content !== 'string' || content.trim().length === 0) && (!images || images.length === 0)) {
+            return res.status(400).json({ error: 'Content or images are required.' });
         }
 
         // Verify the node belongs to this user
@@ -141,7 +141,7 @@ router.post('/:nodeId', async (req, res, next) => {
             id: noteId,
             node_id: nodeId,
             user_id: userId,
-            content: content.trim(),
+            content: (content || '').trim(),
             images: images || [],
             created_at: now,
             updated_at: now,

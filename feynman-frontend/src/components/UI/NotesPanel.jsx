@@ -2,7 +2,7 @@
 // NotesPanel — Rich notes for knowledge nodes with image upload + AI suggestions
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useBrainStore from '../../store/brainStore';
 import api from '../../lib/api';
@@ -250,7 +250,6 @@ export default function NotesPanel() {
     const [notes, setNotes] = useState([]);
     const [loadingNotes, setLoadingNotes] = useState(false);
     const [content, setContent] = useState('');
-    const [images, setImages] = useState([]);
     const [saving, setSaving] = useState(false);
 
     // AI Suggestions
@@ -259,7 +258,6 @@ export default function NotesPanel() {
     const [approvingId, setApprovingId] = useState(null);
 
     const textareaRef = useRef(null);
-    const fileInputRef = useRef(null);
 
     const node = nodeId ? getNodeById(nodeId) : null;
 
@@ -284,48 +282,17 @@ export default function NotesPanel() {
         setLoadingNotes(false);
     };
 
-    // Upload a single image to Supabase Storage and return its permanent URL
-    const uploadImageToStorage = async (base64DataUrl, mimeType) => {
-        try {
-            const res = await api.post('/api/notes/upload/image', {
-                base64: base64DataUrl,
-                mimeType: mimeType,
-                nodeId: nodeId,
-            });
-            return res.data.url; // permanent Supabase Storage URL
-        } catch (err) {
-            console.error('Failed to upload image:', err);
-            return null;
-        }
-    };
-
-    // Save a new note — uploads images to permanent storage first
+    // Save a new note — text only for panel notes
     const handleSave = async () => {
-        if (!content.trim() && images.length === 0) return;
+        if (!content.trim()) return;
         setSaving(true);
         try {
-            // Upload all images to Supabase Storage first
-            const permanentUrls = [];
-            for (const img of images) {
-                if (img.url) {
-                    // Already uploaded (permanent URL)
-                    permanentUrls.push(img.url);
-                } else {
-                    // base64 data URL — upload to storage
-                    const mimeMatch = img.dataUrl.match(/^data:([^;]+);/);
-                    const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
-                    const url = await uploadImageToStorage(img.dataUrl, mimeType);
-                    if (url) permanentUrls.push(url);
-                }
-            }
-
             const res = await api.post(`/api/notes/${nodeId}`, {
                 content: content.trim(),
-                images: permanentUrls,
+                images: [],
             });
             setNotes((prev) => [res.data.note, ...prev]);
             setContent('');
-            setImages([]);
             if (textareaRef.current) textareaRef.current.style.height = 'auto';
         } catch (err) {
             console.error('Failed to save note:', err);
@@ -343,29 +310,6 @@ export default function NotesPanel() {
         }
     };
 
-    // Handle image upload — reads file as base64 for preview, stores for later upload
-    const handleImageUpload = (e) => {
-        const files = Array.from(e.target.files);
-        files.forEach((file) => {
-            if (file.size > 5 * 1024 * 1024) return; // 5MB limit
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                // Store both preview data URL and metadata for upload
-                setImages((prev) => [...prev, {
-                    dataUrl: ev.target.result,      // for preview
-                    name: file.name,
-                    mimeType: file.type || 'image/png',
-                }]);
-            };
-            reader.readAsDataURL(file);
-        });
-        e.target.value = '';
-    };
-
-    // Remove an image before saving
-    const removeImage = (index) => {
-        setImages((prev) => prev.filter((_, i) => i !== index));
-    };
 
     // AI Suggestions
     const handleGetSuggestions = async () => {
@@ -585,48 +529,6 @@ export default function NotesPanel() {
 
                 {/* ─── Composer ─── */}
                 <div style={composerStyle}>
-                    {/* Image previews */}
-                    {images.length > 0 && (
-                        <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                            {images.map((img, i) => (
-                                <div key={i} style={{ position: 'relative' }}>
-                                    <img
-                                        src={img.dataUrl || img}
-                                        alt={`Upload ${i + 1}`}
-                                        style={{
-                                            width: '52px',
-                                            height: '52px',
-                                            objectFit: 'cover',
-                                            borderRadius: '8px',
-                                            border: '1px solid rgba(139, 92, 246, 0.2)',
-                                        }}
-                                    />
-                                    <button
-                                        onClick={() => removeImage(i)}
-                                        style={{
-                                            position: 'absolute',
-                                            top: '-4px',
-                                            right: '-4px',
-                                            width: '16px',
-                                            height: '16px',
-                                            borderRadius: '50%',
-                                            background: '#f43f5e',
-                                            border: 'none',
-                                            color: '#fff',
-                                            fontSize: '9px',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            lineHeight: 1,
-                                        }}
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
 
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
                         <textarea
@@ -656,59 +558,26 @@ export default function NotesPanel() {
                             onBlur={(e) => { e.target.style.borderColor = 'rgba(139, 92, 246, 0.12)'; }}
                         />
 
-                        {/* Image upload button */}
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            style={{
-                                width: '38px',
-                                height: '38px',
-                                background: 'rgba(139, 92, 246, 0.08)',
-                                border: '1px solid rgba(139, 92, 246, 0.15)',
-                                borderRadius: '10px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '16px',
-                                flexShrink: 0,
-                                transition: 'all 0.2s',
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.08)'; }}
-                            title="Add image"
-                        >
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.5" stroke="#8b5cf6" strokeWidth="1.2"/><circle cx="5.5" cy="6.5" r="1.2" stroke="#8b5cf6" strokeWidth="0.8"/><path d="M2.5 11.5l3-3 2.5 2 3-4 2.5 3" stroke="#8b5cf6" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round" opacity="0.7"/></svg>
-                        </button>
-
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={handleImageUpload}
-                            style={{ display: 'none' }}
-                        />
-
                         {/* Save button */}
                         <button
                             onClick={handleSave}
-                            disabled={saving || (!content.trim() && images.length === 0)}
+                            disabled={saving || !content.trim()}
                             style={{
                                 width: '38px',
                                 height: '38px',
-                                background: (content.trim() || images.length > 0)
+                                background: content.trim()
                                     ? 'linear-gradient(135deg, #7c3aed, #8b5cf6)'
                                     : 'rgba(139, 92, 246, 0.08)',
                                 border: 'none',
                                 borderRadius: '10px',
-                                cursor: (content.trim() || images.length > 0) ? 'pointer' : 'default',
+                                cursor: content.trim() ? 'pointer' : 'default',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontSize: '16px',
                                 flexShrink: 0,
                                 transition: 'all 0.2s',
-                                opacity: (content.trim() || images.length > 0) ? 1 : 0.4,
+                                opacity: content.trim() ? 1 : 0.4,
                             }}
                             title="Save note (⌘+Enter)"
                         >

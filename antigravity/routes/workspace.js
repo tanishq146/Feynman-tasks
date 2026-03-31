@@ -34,7 +34,9 @@ async function ensureTable() {
         throw new Error('workspace_notes table not found. Run the migration SQL in Supabase dashboard.');
     }
     if (error) {
+        // Don't set tableReady on error — allow retry on next request
         console.warn('⚠️ workspace_notes check returned error:', error.message);
+        return;
     }
     tableReady = true;
 }

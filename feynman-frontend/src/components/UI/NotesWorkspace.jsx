@@ -110,7 +110,7 @@ function SidebarNote({ note, isActive, onClick }) {
             onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
-                {note.is_pinned && <span style={{ fontSize: '10px', display: 'inline-flex' }}><svg width="10" height="10" viewBox="0 0 24 24" fill="#ffaa00" stroke="none"><path d="M16 2l-4 4-6-1-1 7 4 4-2 6h2l3-4 4 2 1-6 4-4-1-2z"/></svg></span>}
+                {note.is_pinned && <span style={{ fontSize: '10px', display: 'inline-flex' }}><svg width="10" height="10" viewBox="0 0 24 24" fill="#ffaa00" stroke="#ffaa00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg></span>}
                 <div style={{
                     fontFamily: font, fontSize: '13px', fontWeight: 600,
                     color: isActive ? '#e8f4fd' : 'rgba(232, 244, 253, 0.8)',
@@ -133,12 +133,12 @@ function SidebarNote({ note, isActive, onClick }) {
                 <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
                     {note.images?.length > 0 && (
                         <span style={{ fontSize: '9px', color: 'rgba(139, 92, 246, 0.5)' }}>
-                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg> {note.images.length}
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg> {note.images.length}
                         </span>
                     )}
                     {note.voice_urls?.length > 0 && (
                         <span style={{ fontSize: '9px', color: 'rgba(0, 212, 255, 0.5)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/></svg>
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="11" rx="3" /><path d="M5 10a7 7 0 0 0 14 0" /><line x1="12" y1="17" x2="12" y2="22" /></svg>
                             {note.voice_urls.length}
                         </span>
                     )}
@@ -238,6 +238,10 @@ export default function NotesWorkspace({ isOpen, onClose }) {
     const editorRef = useRef(null);
     const saveTimerRef = useRef(null);
     const fileInputRef = useRef(null);
+    const notesRef = useRef(notes);
+    notesRef.current = notes;
+    const activeNoteIdRef = useRef(activeNoteId);
+    activeNoteIdRef.current = activeNoteId;
     const { recording, duration, start: startRecording, stop: stopRecording } = useVoiceRecorder();
 
     const activeNote = notes.find(n => n.id === activeNoteId) || null;
@@ -270,7 +274,22 @@ export default function NotesWorkspace({ isOpen, onClose }) {
         setSaving(true);
         try {
             const res = await api.put(`/api/workspace/notes/${noteId}`, updates);
-            setNotes(prev => prev.map(n => n.id === noteId ? res.data.note : n));
+            const serverNote = res.data.note;
+            // Merge only the saved fields from server into local note.
+            // This prevents overwriting unsaved local text when saving images/voice.
+            setNotes(prev => prev.map(n => {
+                if (n.id !== noteId) return n;
+                const merged = { ...n };
+                // Always take server's updated_at
+                merged.updated_at = serverNote.updated_at;
+                // Only overwrite fields that were actually in the updates payload
+                if (updates.title !== undefined) merged.title = serverNote.title;
+                if (updates.content !== undefined) merged.content = serverNote.content;
+                if (updates.images !== undefined) merged.images = serverNote.images;
+                if (updates.voice_urls !== undefined) merged.voice_urls = serverNote.voice_urls;
+                if (updates.is_pinned !== undefined) merged.is_pinned = serverNote.is_pinned;
+                return merged;
+            }));
         } catch (err) {
             console.error('Auto-save failed:', err);
         }
@@ -388,30 +407,37 @@ export default function NotesWorkspace({ isOpen, onClose }) {
 
     const handleImageUpload = async (e) => {
         const files = Array.from(e.target.files || e.dataTransfer?.files || []);
+        const currentNoteId = activeNoteIdRef.current;
+        if (!currentNoteId || String(currentNoteId).startsWith('temp-')) return;
         for (const file of files) {
             if (file.size > 5 * 1024 * 1024) continue;
             if (!file.type.startsWith('image/')) continue;
             const url = await uploadImage(file);
-            if (url && activeNoteId) {
-                const note = notes.find(n => n.id === activeNoteId);
-                const newImages = [...(note?.images || []), url];
-                await saveNote(activeNoteId, { images: newImages });
+            if (url) {
+                // Read latest images from ref to avoid stale closure accumulation bugs
+                const latestNote = notesRef.current.find(n => n.id === currentNoteId);
+                const newImages = [...(latestNote?.images || []), url];
+                await saveNote(currentNoteId, { images: newImages });
             }
         }
         if (e.target?.value) e.target.value = '';
     };
 
     const handleRemoveImage = async (url) => {
-        if (!activeNote) return;
-        const newImages = activeNote.images.filter(i => i !== url);
-        await saveNote(activeNoteId, { images: newImages });
+        const currentNoteId = activeNoteIdRef.current;
+        if (!currentNoteId) return;
+        const latestNote = notesRef.current.find(n => n.id === currentNoteId);
+        if (!latestNote) return;
+        const newImages = (latestNote.images || []).filter(i => i !== url);
+        await saveNote(currentNoteId, { images: newImages });
     };
 
     // ─── Voice Recording ────────────────────────────────────────────────
     const handleVoiceToggle = async () => {
         if (recording) {
             const result = await stopRecording();
-            if (result && activeNoteId) {
+            const currentNoteId = activeNoteIdRef.current;
+            if (result && currentNoteId && !String(currentNoteId).startsWith('temp-')) {
                 // Upload voice note
                 const reader = new FileReader();
                 reader.onload = async (e) => {
@@ -421,12 +447,14 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                             mimeType: result.mimeType,
                             duration: result.duration,
                         });
-                        const note = notes.find(n => n.id === activeNoteId);
-                        const newVoice = [...(note?.voice_urls || []), res.data.url];
-                        await saveNote(activeNoteId, { voice_urls: newVoice });
+                        // Use ref to get latest note state (avoid stale closure)
+                        const latestNote = notesRef.current.find(n => n.id === currentNoteId);
+                        const newVoice = [...(latestNote?.voice_urls || []), res.data.url];
+                        await saveNote(currentNoteId, { voice_urls: newVoice });
                         addToast({ type: 'success', icon: '◉', message: `Voice note saved (${result.duration}s)`, duration: 3000 });
                     } catch (err) {
                         console.error('Voice upload failed:', err);
+                        addToast({ type: 'danger', icon: '✕', message: 'Voice upload failed', duration: 3000 });
                     }
                 };
                 reader.readAsDataURL(result.blob);
@@ -437,9 +465,12 @@ export default function NotesWorkspace({ isOpen, onClose }) {
     };
 
     const handleRemoveVoice = async (url) => {
-        if (!activeNote) return;
-        const newVoice = activeNote.voice_urls.filter(v => v !== url);
-        await saveNote(activeNoteId, { voice_urls: newVoice });
+        const currentNoteId = activeNoteIdRef.current;
+        if (!currentNoteId) return;
+        const latestNote = notesRef.current.find(n => n.id === currentNoteId);
+        if (!latestNote) return;
+        const newVoice = (latestNote.voice_urls || []).filter(v => v !== url);
+        await saveNote(currentNoteId, { voice_urls: newVoice });
     };
 
     // ─── Drop Handler ───────────────────────────────────────────────────
@@ -540,7 +571,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                             fontFamily: fontMono, fontSize: '9px', fontWeight: 600,
                             color: 'rgba(0, 212, 255, 0.4)', letterSpacing: '2px', textTransform: 'uppercase',
                         }}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{opacity:0.7}}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Notes
+                            NOTES
                         </div>
                         <button
                             onClick={onClose}
@@ -595,7 +626,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                         </div>
                     ) : filteredNotes.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '40px 16px', color: 'rgba(232, 244, 253, 0.2)' }}>
-                            <div style={{ fontSize: '28px', marginBottom: '8px', display: 'flex', justifyContent: 'center' }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(0,212,255,0.3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+                            <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'center', opacity: 0.3 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3"/><path d="M8 3v4h8V3"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg></div>
                             <div style={{ fontSize: '13px', fontWeight: 500 }}>
                                 {searchQuery ? 'No matching notes' : 'No notes yet'}
                             </div>
@@ -656,7 +687,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: '16px', color: '#00d4ff', fontWeight: 600,
                     }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg> Drop image here
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg> Drop image here
                     </div>
                 )}
 
@@ -680,7 +711,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     fontSize: '13px', cursor: 'pointer',
                                 }}
-                            ><svg width="13" height="13" viewBox="0 0 24 24" fill={activeNote.is_pinned ? '#ffaa00' : 'none'} stroke={activeNote.is_pinned ? '#ffaa00' : 'rgba(232,244,253,0.4)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 2l-4 4-6-1-1 7 4 4-2 6h2l3-4 4 2 1-6 4-4-1-2z"/></svg></button>
+                            ><svg width="13" height="13" viewBox="0 0 24 24" fill={activeNote.is_pinned ? '#ffaa00' : 'none'} stroke={activeNote.is_pinned ? '#ffaa00' : 'rgba(232,244,253,0.4)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg></button>
 
                             {/* Image upload */}
                             <button
@@ -692,7 +723,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     fontSize: '13px', cursor: 'pointer', color: '#8b5cf6',
                                 }}
-                            ><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></button>
+                            ><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg></button>
                             <input ref={fileInputRef} type="file" accept="image/*" multiple
                                 onChange={handleImageUpload} style={{ display: 'none' }} />
 
@@ -720,7 +751,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                             {duration}s
                                         </span>
                                     </>
-                                ) : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/></svg>}
+                                ) : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="11" rx="3" /><path d="M5 10a7 7 0 0 0 14 0" /><line x1="12" y1="17" x2="12" y2="22" /></svg>}
                             </button>
 
                             {/* AI Analyze */}
@@ -753,7 +784,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     fontSize: '13px', cursor: 'pointer',
                                 }}
-                            ><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(232,244,253,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+                            ><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(232,244,253,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg></button>
 
                             {/* Delete */}
                             <button
@@ -765,7 +796,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     fontSize: '13px', cursor: 'pointer',
                                 }}
-                            ><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(244,63,94,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                            ><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(244,63,94,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
 
                             {/* Save indicator */}
                             <span style={{
@@ -794,50 +825,98 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                     }}
                                 />
 
-                                {/* Attachments */}
-                                {((activeNote.images?.length > 0) || (activeNote.voice_urls?.length > 0)) && (
-                                    <div style={{ padding: '4px 40px 8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                        {activeNote.images?.map((url, i) => (
-                                            <div key={url} style={{ position: 'relative' }}>
+                                {/* ═══ IMAGES — large inline gallery ═══ */}
+                                {activeNote.images?.length > 0 && (
+                                    <div style={{ padding: '12px 40px 4px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                        {activeNote.images.map((url, i) => (
+                                            <div key={url} style={{
+                                                position: 'relative', borderRadius: '12px', overflow: 'hidden',
+                                                border: '1px solid rgba(139, 92, 246, 0.15)',
+                                                background: 'rgba(139, 92, 246, 0.04)',
+                                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                                cursor: 'grab', flexShrink: 0,
+                                            }}
+                                                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.02)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(139,92,246,0.15)'; }}
+                                                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = 'none'; }}
+                                            >
                                                 <img
-                                                    src={url} alt={`Attachment ${i + 1}`}
+                                                    src={url} alt={`Image ${i + 1}`}
                                                     style={{
-                                                        width: '80px', height: '80px', objectFit: 'cover',
-                                                        borderRadius: '10px', border: '1px solid rgba(139, 92, 246, 0.15)',
-                                                        cursor: 'pointer',
+                                                        width: '200px', height: '150px', objectFit: 'cover',
+                                                        display: 'block',
                                                     }}
                                                     onClick={() => window.open(url, '_blank')}
                                                 />
                                                 <button
-                                                    onClick={() => handleRemoveImage(url)}
+                                                    onClick={(e) => { e.stopPropagation(); handleRemoveImage(url); }}
                                                     style={{
-                                                        position: 'absolute', top: '-4px', right: '-4px',
-                                                        width: '16px', height: '16px', borderRadius: '50%',
-                                                        background: '#f43f5e', border: 'none', color: '#fff',
-                                                        fontSize: '8px', cursor: 'pointer',
+                                                        position: 'absolute', top: '6px', right: '6px',
+                                                        width: '22px', height: '22px', borderRadius: '50%',
+                                                        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+                                                        border: '1px solid rgba(255,255,255,0.1)', color: '#fff',
+                                                        fontSize: '10px', cursor: 'pointer',
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        opacity: 0.7, transition: 'opacity 0.2s',
                                                     }}
+                                                    onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                                                    onMouseLeave={e => e.currentTarget.style.opacity = '0.7'}
                                                 >✕</button>
+                                                <div style={{
+                                                    position: 'absolute', bottom: '0', left: '0', right: '0',
+                                                    padding: '16px 10px 6px', background: 'linear-gradient(transparent, rgba(0,0,0,0.5))',
+                                                    fontFamily: fontMono, fontSize: '9px', color: 'rgba(255,255,255,0.5)',
+                                                    letterSpacing: '0.5px',
+                                                }}>Image {i + 1}</div>
                                             </div>
                                         ))}
-                                        {activeNote.voice_urls?.map((url, i) => (
-                                            <div key={url} style={{
-                                                display: 'flex', alignItems: 'center', gap: '6px',
-                                                padding: '6px 10px', borderRadius: '8px',
-                                                background: 'rgba(0, 212, 255, 0.04)',
-                                                border: '1px solid rgba(0, 212, 255, 0.1)',
-                                            }}>
-                                                <span style={{ display: 'flex', alignItems: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/></svg></span>
-                                                <audio src={url} controls style={{ height: '28px', maxWidth: '180px' }} />
-                                                <button
-                                                    onClick={() => handleRemoveVoice(url)}
-                                                    style={{
-                                                        background: 'none', border: 'none', color: 'rgba(244, 63, 94, 0.5)',
-                                                        fontSize: '10px', cursor: 'pointer', padding: '2px',
-                                                    }}
-                                                >✕</button>
-                                            </div>
-                                        ))}
+                                    </div>
+                                )}
+
+                                {/* ═══ VOICE MESSAGES — dedicated playback area ═══ */}
+                                {activeNote.voice_urls?.length > 0 && (
+                                    <div style={{ padding: '8px 40px 4px' }}>
+                                        <div style={{
+                                            fontFamily: fontMono, fontSize: '9px', fontWeight: 600,
+                                            color: 'rgba(0, 212, 255, 0.4)', letterSpacing: '1.5px',
+                                            textTransform: 'uppercase', marginBottom: '8px',
+                                        }}>Voice Notes ({activeNote.voice_urls.length})</div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            {activeNote.voice_urls.map((url, i) => (
+                                                <div key={url} style={{
+                                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                                    padding: '10px 14px', borderRadius: '10px',
+                                                    background: 'rgba(0, 212, 255, 0.03)',
+                                                    border: '1px solid rgba(0, 212, 255, 0.08)',
+                                                    transition: 'background 0.2s',
+                                                }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0, 212, 255, 0.06)'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(0, 212, 255, 0.03)'}
+                                                >
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                                                        <rect x="9" y="2" width="6" height="11" rx="3" />
+                                                        <path d="M5 10a7 7 0 0 0 14 0" />
+                                                        <line x1="12" y1="17" x2="12" y2="22" />
+                                                    </svg>
+                                                    <span style={{ fontFamily: fontMono, fontSize: '10px', color: 'rgba(0,212,255,0.5)', flexShrink: 0, width: '60px' }}>Voice {i + 1}</span>
+                                                    <audio src={url} controls style={{
+                                                        flex: 1, height: '32px', maxWidth: '400px',
+                                                        filter: 'hue-rotate(180deg) saturate(0.6) brightness(0.8)',
+                                                    }} />
+                                                    <button
+                                                        onClick={() => handleRemoveVoice(url)}
+                                                        title="Remove voice note"
+                                                        style={{
+                                                            background: 'none', border: 'none',
+                                                            color: 'rgba(244, 63, 94, 0.4)', fontSize: '12px',
+                                                            cursor: 'pointer', padding: '4px', flexShrink: 0,
+                                                            transition: 'color 0.2s',
+                                                        }}
+                                                        onMouseEnter={e => e.currentTarget.style.color = '#f43f5e'}
+                                                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(244, 63, 94, 0.4)'}
+                                                    >✕</button>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
 
@@ -944,7 +1023,7 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                         flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
                         flexDirection: 'column', gap: '12px',
                     }}>
-                        <div style={{ fontSize: '48px', opacity: 0.3, display: 'flex', justifyContent: 'center' }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(0,212,255,0.3)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+                        <div style={{ opacity: 0.3, display: 'flex', justifyContent: 'center' }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(0,212,255,0.3)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3"/><path d="M8 3v4h8V3"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg></div>
                         <div style={{ fontSize: '16px', fontWeight: 600, color: 'rgba(232, 244, 253, 0.3)' }}>
                             {notes.length > 0 ? 'Select a note' : 'Create your first note'}
                         </div>
