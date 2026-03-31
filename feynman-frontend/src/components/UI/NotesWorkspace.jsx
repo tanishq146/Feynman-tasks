@@ -33,17 +33,35 @@ function useVoiceRecorder() {
 
     const start = useCallback(async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            // Pick best supported mime type for playback compatibility
-            const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
-                .find(m => MediaRecorder.isTypeSupported(m)) || '';
-            const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+            // Request high-quality audio with voice optimization
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,     // normalizes volume so voice is clear
+                    sampleRate: 48000,          // high sample rate for clarity
+                    channelCount: 1,            // mono for voice
+                },
+            });
+
+            // Pick best supported codec for quality + compatibility
+            const mimeType = [
+                'audio/webm;codecs=opus',
+                'audio/webm',
+                'audio/ogg;codecs=opus',
+                'audio/mp4',
+            ].find(m => MediaRecorder.isTypeSupported(m)) || '';
+
+            const options = { audioBitsPerSecond: 128000 };
+            if (mimeType) options.mimeType = mimeType;
+
+            const recorder = new MediaRecorder(stream, options);
             chunks.current = [];
             recorder.ondataavailable = (e) => {
                 if (e.data.size > 0) chunks.current.push(e.data);
             };
-            // Use timeslice (250ms) so data arrives in chunks during recording
-            recorder.start(250);
+            // Do NOT use timeslice — record continuously for clean, unfragmented audio
+            recorder.start();
             mediaRecorder.current = recorder;
             startTime.current = Date.now();
             setRecording(true);
@@ -63,10 +81,12 @@ function useVoiceRecorder() {
                 return;
             }
             clearInterval(timer.current);
+            // Request any remaining data before stopping
+            mediaRecorder.current.requestData();
             mediaRecorder.current.onstop = () => {
                 const mimeType = mediaRecorder.current.mimeType || 'audio/webm';
                 const blob = new Blob(chunks.current, { type: mimeType });
-                // Stop all tracks
+                // Stop all mic tracks to release the microphone
                 mediaRecorder.current.stream.getTracks().forEach(t => t.stop());
                 setRecording(false);
                 const dur = Math.floor((Date.now() - startTime.current) / 1000);
@@ -301,9 +321,13 @@ function VoicePlayer({ url, index, onRemove }) {
     const [playing, setPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
     const [audioDuration, setAudioDuration] = useState(0);
+    const [volume, setVolume] = useState(1.0);
     const animRef = useRef(null);
+    const gainNodeRef = useRef(null);
+    const audioCtxRef = useRef(null);
+    const sourceRef = useRef(null);
 
-    // Create object URL from data URL for better playback
+    // Create object URL from data URL for proper playback
     const [objectUrl, setObjectUrl] = useState(null);
     useEffect(() => {
         if (url && url.startsWith('data:')) {
@@ -326,6 +350,27 @@ function VoicePlayer({ url, index, onRemove }) {
         }
     }, [url]);
 
+    // Set up Web Audio API gain node for volume boost
+    useEffect(() => {
+        if (!audioRef.current) return;
+        try {
+            if (!audioCtxRef.current) {
+                audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (!sourceRef.current) {
+                sourceRef.current = audioCtxRef.current.createMediaElementSource(audioRef.current);
+                gainNodeRef.current = audioCtxRef.current.createGain();
+                sourceRef.current.connect(gainNodeRef.current);
+                gainNodeRef.current.connect(audioCtxRef.current.destination);
+            }
+            // Boost gain for clear playback (1.5x default volume)
+            if (gainNodeRef.current) gainNodeRef.current.gain.value = volume * 1.5;
+        } catch (e) {
+            // Fallback: just set volume directly
+            if (audioRef.current) audioRef.current.volume = volume;
+        }
+    }, [objectUrl, volume]);
+
     const tick = () => {
         if (audioRef.current) {
             setProgress(audioRef.current.currentTime);
@@ -335,8 +380,17 @@ function VoicePlayer({ url, index, onRemove }) {
 
     const togglePlay = () => {
         if (!audioRef.current) return;
-        if (playing) { audioRef.current.pause(); setPlaying(false); }
-        else { audioRef.current.play().then(() => { setPlaying(true); animRef.current = requestAnimationFrame(tick); }).catch(() => {}); }
+        // Resume AudioContext if suspended (browser autoplay policy)
+        if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume();
+        if (playing) {
+            audioRef.current.pause();
+            setPlaying(false);
+        } else {
+            audioRef.current.play().then(() => {
+                setPlaying(true);
+                animRef.current = requestAnimationFrame(tick);
+            }).catch((err) => console.error('Playback failed:', err));
+        }
     };
 
     const seek = (e) => {
@@ -355,12 +409,12 @@ function VoicePlayer({ url, index, onRemove }) {
             background: 'rgba(0, 212, 255, 0.03)', border: '1px solid rgba(0, 212, 255, 0.08)', transition: 'background 0.2s',
         }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(0, 212, 255, 0.06)'}
            onMouseLeave={e => e.currentTarget.style.background = 'rgba(0, 212, 255, 0.03)'}>
-            <audio ref={audioRef} src={objectUrl} preload="metadata"
+            <audio ref={audioRef} src={objectUrl} preload="auto"
                 onLoadedMetadata={() => setAudioDuration(audioRef.current?.duration || 0)}
                 onEnded={() => { setPlaying(false); setProgress(0); }} style={{ display: 'none' }} />
             {/* Play/Pause */}
             <button onClick={togglePlay} style={{
-                width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
+                width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
                 background: playing ? 'rgba(0,212,255,0.15)' : 'rgba(0,212,255,0.08)',
                 border: '1px solid rgba(0,212,255,0.2)', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00d4ff',
@@ -388,6 +442,13 @@ function VoicePlayer({ url, index, onRemove }) {
             <span style={{ fontFamily: fontMono, fontSize: '9px', color: 'rgba(0,212,255,0.4)', flexShrink: 0, width: '32px', textAlign: 'right' }}>
                 {audioDuration ? fmtTime(audioDuration) : '--:--'}
             </span>
+            {/* Volume */}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(0,212,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+            </svg>
+            <input type="range" min="0" max="2" step="0.1" value={volume}
+                onChange={e => setVolume(parseFloat(e.target.value))}
+                style={{ width: '50px', accentColor: '#00d4ff', flexShrink: 0 }} />
             <button onClick={() => onRemove(index)} title="Remove voice note"
                 style={{
                     background: 'none', border: 'none', color: 'rgba(244, 63, 94, 0.4)', fontSize: '12px',
