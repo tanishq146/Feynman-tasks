@@ -219,93 +219,77 @@ function AISuggestion({ suggestion, onApprove, onDismiss, approving }) {
     );
 }
 
-// ─── Draggable / Resizable Image ────────────────────────────────────────────
+// ─── Inline Note Image (resizable, flows in document like Obsidian) ──────────
 
-function DraggableImage({ imgData, index, onUpdate, onRemove }) {
-    // imgData can be a string (legacy URL) or object { url, x, y, w, h }
-    const isObj = typeof imgData === 'object' && imgData !== null;
-    const url = isObj ? imgData.url : imgData;
-    const x = isObj ? (imgData.x || 0) : 0;
-    const y = isObj ? (imgData.y || 0) : 0;
-    const w = isObj ? (imgData.w || 220) : 220;
-    const h = isObj ? (imgData.h || 165) : 165;
-
-    const containerRef = useRef(null);
-    const dragging = useRef(false);
+function InlineNoteImage({ src, width, onResize, onRemove }) {
+    const [w, setW] = useState(width || 400);
     const resizing = useRef(false);
-    const startPos = useRef({ mx: 0, my: 0, ox: 0, oy: 0, ow: 0, oh: 0 });
+    const startRef = useRef({ mx: 0, ow: 0 });
 
-    const onMouseDownDrag = (e) => {
-        if (e.target.dataset.resize) return;
+    const startResize = (e) => {
         e.preventDefault();
-        dragging.current = true;
-        startPos.current = { mx: e.clientX, my: e.clientY, ox: x, oy: y };
-        const onMove = (ev) => {
-            if (!dragging.current) return;
-            const dx = ev.clientX - startPos.current.mx;
-            const dy = ev.clientY - startPos.current.my;
-            onUpdate(index, { x: startPos.current.ox + dx, y: startPos.current.oy + dy, w, h, url });
-        };
-        const onUp = () => { dragging.current = false; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-        window.addEventListener('mousemove', onMove);
-        window.addEventListener('mouseup', onUp);
-    };
-
-    const onMouseDownResize = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
         resizing.current = true;
-        startPos.current = { mx: e.clientX, my: e.clientY, ow: w, oh: h, ox: x, oy: y };
+        startRef.current = { mx: e.clientX, ow: w };
         const onMove = (ev) => {
             if (!resizing.current) return;
-            const dx = ev.clientX - startPos.current.mx;
-            const dy = ev.clientY - startPos.current.my;
-            const nw = Math.max(100, startPos.current.ow + dx);
-            const nh = Math.max(75, startPos.current.oh + dy);
-            onUpdate(index, { x, y, w: nw, h: nh, url });
+            const nw = Math.max(80, Math.min(800, startRef.current.ow + (ev.clientX - startRef.current.mx)));
+            setW(nw);
         };
-        const onUp = () => { resizing.current = false; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+        const onUp = () => {
+            resizing.current = false;
+            if (onResize) onResize(w);
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+        };
         window.addEventListener('mousemove', onMove);
         window.addEventListener('mouseup', onUp);
     };
 
     return (
-        <div
-            ref={containerRef}
-            onMouseDown={onMouseDownDrag}
-            style={{
-                position: 'absolute', left: x, top: y, width: w, height: h,
-                borderRadius: '10px', overflow: 'visible', cursor: 'grab',
-                border: '1px solid rgba(139, 92, 246, 0.2)',
-                boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
-                zIndex: 5, transition: dragging.current || resizing.current ? 'none' : 'box-shadow 0.2s',
-                userSelect: 'none',
-            }}
+        <div style={{
+            position: 'relative', display: 'inline-block', margin: '6px 0',
+            borderRadius: '10px', overflow: 'visible', userSelect: 'none',
+            border: '1px solid rgba(139, 92, 246, 0.15)',
+            background: 'rgba(139, 92, 246, 0.03)',
+            transition: 'box-shadow 0.2s',
+        }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 16px rgba(139,92,246,0.12)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
         >
-            <img src={url} alt={`Image ${index + 1}`} draggable={false}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px', display: 'block', pointerEvents: 'none' }} />
-            {/* Remove button */}
-            <button onClick={(e) => { e.stopPropagation(); onRemove(index); }}
+            <img src={src} alt="" draggable={false}
+                style={{ width: w, maxWidth: '100%', display: 'block', borderRadius: '10px', cursor: 'zoom-in' }}
+                onClick={() => window.open(src, '_blank')}
+            />
+            {/* Remove */}
+            <button onClick={(e) => { e.stopPropagation(); onRemove(); }}
                 style={{
-                    position: 'absolute', top: -8, right: -8, width: '22px', height: '22px', borderRadius: '50%',
-                    background: 'rgba(244,63,94,0.9)', border: '2px solid #020814', color: '#fff',
-                    fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    zIndex: 10, fontWeight: 700,
-                }}>✕</button>
-            {/* Resize handle — bottom-right corner */}
-            <div data-resize="true" onMouseDown={onMouseDownResize}
+                    position: 'absolute', top: -6, right: -6, width: '20px', height: '20px', borderRadius: '50%',
+                    background: 'rgba(244,63,94,0.85)', border: '2px solid #020814', color: '#fff',
+                    fontSize: '9px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: 0, transition: 'opacity 0.15s', zIndex: 5,
+                }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                ref={el => {
+                    if (!el) return;
+                    const parent = el.parentElement;
+                    parent.addEventListener('mouseenter', () => el.style.opacity = '1');
+                    parent.addEventListener('mouseleave', () => el.style.opacity = '0');
+                }}
+            >✕</button>
+            {/* Resize handle */}
+            <div onMouseDown={startResize}
                 style={{
-                    position: 'absolute', bottom: -4, right: -4, width: '14px', height: '14px',
-                    background: 'rgba(139,92,246,0.8)', borderRadius: '3px', cursor: 'nwse-resize',
-                    border: '2px solid #020814', zIndex: 10,
-                }} />
-            {/* Size label */}
-            <div style={{
-                position: 'absolute', bottom: 4, left: 6,
-                fontFamily: fontMono, fontSize: '8px', color: 'rgba(255,255,255,0.4)',
-                background: 'rgba(0,0,0,0.5)', padding: '1px 4px', borderRadius: '3px',
-                pointerEvents: 'none',
-            }}>{Math.round(w)}×{Math.round(h)}</div>
+                    position: 'absolute', bottom: 2, right: 2, width: '12px', height: '12px',
+                    cursor: 'ew-resize', borderRadius: '3px',
+                    background: 'rgba(139,92,246,0.5)', opacity: 0, transition: 'opacity 0.15s',
+                }}
+                ref={el => {
+                    if (!el) return;
+                    const parent = el.parentElement;
+                    parent.addEventListener('mouseenter', () => el.style.opacity = '1');
+                    parent.addEventListener('mouseleave', () => el.style.opacity = '0');
+                }}
+            />
         </div>
     );
 }
@@ -617,11 +601,15 @@ export default function NotesWorkspace({ isOpen, onClose }) {
             if (url) {
                 const latestNote = notesRef.current.find(n => n.id === currentNoteId);
                 const existingImages = latestNote?.images || [];
-                const offset = existingImages.length * 30;
-                const newImg = { url, x: 20 + offset, y: 20 + offset, w: 220, h: 165 };
-                const newImages = [...existingImages, newImg];
-                await saveNote(currentNoteId, { images: newImages });
-                addToast({ type: 'success', icon: '✓', message: 'Image added — drag to move, corner to resize', duration: 3000 });
+                const imgIndex = existingImages.length;
+                const newImages = [...existingImages, url];
+                // Insert image marker at cursor position in content
+                const cursorPos = editorRef.current?.selectionStart ?? (latestNote?.content || '').length;
+                const content = latestNote?.content || '';
+                const marker = `\n![img:${imgIndex}]\n`;
+                const newContent = content.slice(0, cursorPos) + marker + content.slice(cursorPos);
+                await saveNote(currentNoteId, { images: newImages, content: newContent });
+                addToast({ type: 'success', icon: '✓', message: 'Image added', duration: 2000 });
             } else {
                 addToast({ type: 'danger', icon: '✕', message: 'Image upload failed', duration: 3000 });
             }
@@ -629,45 +617,19 @@ export default function NotesWorkspace({ isOpen, onClose }) {
         if (e.target?.value) e.target.value = '';
     };
 
-    // Update image position/size (called during drag/resize)
-    const imgSaveTimer = useRef(null);
-    const handleImageUpdate = useCallback((index, newData) => {
-        const currentNoteId = activeNoteIdRef.current;
-        if (!currentNoteId) return;
-        // Update local state immediately for smooth drag
-        setNotes(prev => prev.map(n => {
-            if (n.id !== currentNoteId) return n;
-            const imgs = [...(n.images || [])];
-            imgs[index] = newData;
-            return { ...n, images: imgs };
-        }));
-        // Debounced save to server
-        clearTimeout(imgSaveTimer.current);
-        imgSaveTimer.current = setTimeout(() => {
-            const latestNote = notesRef.current.find(n => n.id === currentNoteId);
-            if (latestNote) saveNote(currentNoteId, { images: latestNote.images });
-        }, 500);
-    }, [saveNote]);
-
-    const handleRemoveImageByIndex = async (index) => {
+    const handleRemoveImage = async (imgIndex) => {
         const currentNoteId = activeNoteIdRef.current;
         if (!currentNoteId) return;
         const latestNote = notesRef.current.find(n => n.id === currentNoteId);
         if (!latestNote) return;
-        const newImages = (latestNote.images || []).filter((_, i) => i !== index);
-        await saveNote(currentNoteId, { images: newImages });
-    };
-
-    const handleRemoveImage = async (url) => {
-        const currentNoteId = activeNoteIdRef.current;
-        if (!currentNoteId) return;
-        const latestNote = notesRef.current.find(n => n.id === currentNoteId);
-        if (!latestNote) return;
-        const newImages = (latestNote.images || []).filter(i => {
-            const imgUrl = typeof i === 'object' ? i.url : i;
-            return imgUrl !== url;
-        });
-        await saveNote(currentNoteId, { images: newImages });
+        // Remove the image and its marker from content
+        const newImages = (latestNote.images || []).filter((_, i) => i !== imgIndex);
+        let newContent = (latestNote.content || '').replace(new RegExp(`\\n?!\\[img:${imgIndex}\\]\\n?`, 'g'), '\n');
+        // Reindex remaining markers
+        for (let i = imgIndex + 1; i <= (latestNote.images || []).length; i++) {
+            newContent = newContent.replace(new RegExp(`!\\[img:${i}\\]`, 'g'), `![img:${i - 1}]`);
+        }
+        await saveNote(currentNoteId, { images: newImages, content: newContent.trim() });
     };
 
     // ─── Voice Recording ────────────────────────────────────────────────
@@ -1064,48 +1026,85 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                     }}
                                 />
 
-                                {/* ═══ CANVAS — freely drag/resize images here ═══ */}
-                                {activeNote.images?.length > 0 && (
-                                    <div style={{
-                                        position: 'relative', minHeight: '250px', margin: '4px 24px',
-                                        borderRadius: '12px', border: '1px dashed rgba(139, 92, 246, 0.12)',
-                                        background: 'rgba(139, 92, 246, 0.02)', overflow: 'hidden',
-                                    }}>
-                                        {/* Canvas hint */}
-                                        <div style={{
-                                            position: 'absolute', top: 8, left: 12,
-                                            fontFamily: fontMono, fontSize: '8px', color: 'rgba(139,92,246,0.3)',
-                                            letterSpacing: '1px', textTransform: 'uppercase', pointerEvents: 'none',
-                                            zIndex: 1,
-                                        }}>📌 IMAGE CANVAS — drag to move, corner to resize</div>
-                                        {activeNote.images.map((imgData, i) => (
-                                            <DraggableImage
-                                                key={`img-${i}-${typeof imgData === 'object' ? imgData.url?.slice(-20) : String(imgData).slice(-20)}`}
-                                                imgData={imgData}
-                                                index={i}
-                                                onUpdate={handleImageUpdate}
-                                                onRemove={handleRemoveImageByIndex}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* Text Area */}
-                                <textarea
-                                    ref={editorRef}
-                                    value={activeNote.content || ''}
-                                    onChange={handleContentChange}
-                                    placeholder="Start writing your thoughts... &#10;&#10;Feynman can extract knowledge nodes from your notes using AI."
-                                    style={{
-                                        flex: 1, padding: '8px 40px 40px',
-                                        background: 'none', border: 'none', outline: 'none',
-                                        resize: 'none',
-                                        fontFamily: "'SF Pro Text', -apple-system, sans-serif",
-                                        fontSize: '15px', lineHeight: '1.75',
-                                        color: 'rgba(232, 244, 253, 0.85)',
-                                        letterSpacing: '0.2px',
-                                    }}
-                                />
+                                {/* ═══ BLOCK EDITOR — text + inline images like Obsidian ═══ */}
+                                <div style={{ flex: 1, padding: '8px 40px 40px', overflowY: 'auto' }}>
+                                    {(() => {
+                                        const content = activeNote.content || '';
+                                        const images = activeNote.images || [];
+                                        // Split content by ![img:N] markers
+                                        const parts = content.split(/(\!\[img:\d+\])/);
+                                        if (parts.length <= 1 && images.length === 0) {
+                                            // No images — render simple textarea
+                                            return (
+                                                <textarea
+                                                    ref={editorRef}
+                                                    value={content}
+                                                    onChange={handleContentChange}
+                                                    placeholder={"Start writing your thoughts...\n\nFeynman can extract knowledge nodes from your notes using AI."}
+                                                    style={{
+                                                        width: '100%', minHeight: '300px', height: '100%',
+                                                        background: 'none', border: 'none', outline: 'none',
+                                                        resize: 'none',
+                                                        fontFamily: "'SF Pro Text', -apple-system, sans-serif",
+                                                        fontSize: '15px', lineHeight: '1.75',
+                                                        color: 'rgba(232, 244, 253, 0.85)',
+                                                        letterSpacing: '0.2px',
+                                                    }}
+                                                />
+                                            );
+                                        }
+                                        // Render blocks: text segments + inline images
+                                        return parts.map((part, pi) => {
+                                            const imgMatch = part.match(/^\!\[img:(\d+)\]$/);
+                                            if (imgMatch) {
+                                                const idx = parseInt(imgMatch[1]);
+                                                const imgUrl = typeof images[idx] === 'object' ? images[idx]?.url : images[idx];
+                                                if (!imgUrl) return null;
+                                                return (
+                                                    <div key={`img-${idx}`} style={{ padding: '4px 0' }}>
+                                                        <InlineNoteImage
+                                                            src={imgUrl}
+                                                            width={400}
+                                                            onRemove={() => handleRemoveImage(idx)}
+                                                        />
+                                                    </div>
+                                                );
+                                            }
+                                            // Text segment — use a textarea
+                                            return (
+                                                <textarea
+                                                    key={`text-${pi}`}
+                                                    ref={pi === 0 ? editorRef : undefined}
+                                                    value={part}
+                                                    onChange={(e) => {
+                                                        // Rebuild content from all parts
+                                                        const newParts = [...parts];
+                                                        newParts[pi] = e.target.value;
+                                                        const newContent = newParts.join('');
+                                                        setNotes(prev => prev.map(n =>
+                                                            n.id === activeNoteId ? { ...n, content: newContent, updated_at: new Date().toISOString() } : n
+                                                        ));
+                                                        clearTimeout(saveTimerRef.current);
+                                                        saveTimerRef.current = setTimeout(() => {
+                                                            saveNote(activeNoteId, { content: newContent });
+                                                        }, 1000);
+                                                    }}
+                                                    placeholder={pi === 0 ? "Start writing your thoughts..." : ""}
+                                                    style={{
+                                                        width: '100%', minHeight: part.trim() ? undefined : '60px',
+                                                        height: part ? `${Math.max(40, (part.split('\n').length + 1) * 26)}px` : '60px',
+                                                        background: 'none', border: 'none', outline: 'none',
+                                                        resize: 'none',
+                                                        fontFamily: "'SF Pro Text', -apple-system, sans-serif",
+                                                        fontSize: '15px', lineHeight: '1.75',
+                                                        color: 'rgba(232, 244, 253, 0.85)',
+                                                        letterSpacing: '0.2px', display: 'block',
+                                                    }}
+                                                />
+                                            );
+                                        });
+                                    })()}
+                                </div>
 
                                 {/* ═══ AUDIO PANEL — dedicated voice notes section at bottom ═══ */}
                                 {activeNote.voice_urls?.length > 0 && (
