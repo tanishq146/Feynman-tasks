@@ -314,18 +314,35 @@ function InlineNoteImage({ src, width, onResize, onRemove }) {
     );
 }
 
+// ─── Helper: normalize voice entry → { url, name, id } ─────────────────────
+function normalizeVoice(entry, index) {
+    if (typeof entry === 'string') {
+        return { url: entry, name: `Voice Note ${index + 1}`, id: `v-${index}-${entry.slice(-12)}` };
+    }
+    return {
+        url: entry.url || entry,
+        name: entry.name || `Voice Note ${index + 1}`,
+        id: entry.id || `v-${index}-${(entry.url || '').slice(-12)}`,
+    };
+}
+
 // ─── Audio Panel (dedicated voice notes section) ─────────────────────────────
 
-function VoicePlayer({ url, index, onRemove }) {
+function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
     const audioRef = useRef(null);
     const [playing, setPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
     const [audioDuration, setAudioDuration] = useState(0);
     const [volume, setVolume] = useState(1.0);
+    const [editing, setEditing] = useState(false);
+    const [editName, setEditName] = useState(voiceEntry.name);
     const animRef = useRef(null);
     const gainNodeRef = useRef(null);
     const audioCtxRef = useRef(null);
-    const sourceRef = useRef(null);
+    const sourceConnected = useRef(false);
+    const nameInputRef = useRef(null);
+
+    const url = voiceEntry.url;
 
     // Create object URL from data URL for proper playback
     const [objectUrl, setObjectUrl] = useState(null);
@@ -350,40 +367,60 @@ function VoicePlayer({ url, index, onRemove }) {
         }
     }, [url]);
 
-    // Set up Web Audio API gain node for volume boost
-    useEffect(() => {
-        if (!audioRef.current) return;
+    // Set up Web Audio API gain node — only once per audio element
+    const setupAudioContext = useCallback(() => {
+        if (!audioRef.current || sourceConnected.current) return;
         try {
-            if (!audioCtxRef.current) {
-                audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (!sourceRef.current) {
-                sourceRef.current = audioCtxRef.current.createMediaElementSource(audioRef.current);
-                gainNodeRef.current = audioCtxRef.current.createGain();
-                sourceRef.current.connect(gainNodeRef.current);
-                gainNodeRef.current.connect(audioCtxRef.current.destination);
-            }
-            // Boost gain for clear playback (1.5x default volume)
-            if (gainNodeRef.current) gainNodeRef.current.gain.value = volume * 1.5;
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            audioCtxRef.current = ctx;
+            const source = ctx.createMediaElementSource(audioRef.current);
+            const gain = ctx.createGain();
+            source.connect(gain);
+            gain.connect(ctx.destination);
+            gainNodeRef.current = gain;
+            gain.gain.value = volume * 1.5;
+            sourceConnected.current = true;
         } catch (e) {
             // Fallback: just set volume directly
             if (audioRef.current) audioRef.current.volume = volume;
         }
-    }, [objectUrl, volume]);
+    }, []);
 
-    const tick = () => {
+    // Update volume on gain node when slider changes
+    useEffect(() => {
+        if (gainNodeRef.current) {
+            gainNodeRef.current.gain.value = volume * 1.5;
+        } else if (audioRef.current) {
+            audioRef.current.volume = Math.min(1, volume);
+        }
+    }, [volume]);
+
+    // Clean up on unmount
+    useEffect(() => {
+        return () => {
+            if (animRef.current) cancelAnimationFrame(animRef.current);
+            if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+                audioCtxRef.current.close().catch(() => {});
+            }
+        };
+    }, []);
+
+    const tick = useCallback(() => {
         if (audioRef.current) {
             setProgress(audioRef.current.currentTime);
             if (!audioRef.current.paused) animRef.current = requestAnimationFrame(tick);
         }
-    };
+    }, []);
 
     const togglePlay = () => {
         if (!audioRef.current) return;
+        // Set up audio context on first play (after user interaction)
+        if (!sourceConnected.current) setupAudioContext();
         // Resume AudioContext if suspended (browser autoplay policy)
         if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume();
         if (playing) {
             audioRef.current.pause();
+            cancelAnimationFrame(animRef.current);
             setPlaying(false);
         } else {
             audioRef.current.play().then(() => {
@@ -403,59 +440,128 @@ function VoicePlayer({ url, index, onRemove }) {
 
     const fmtTime = (s) => { const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}`; };
 
+    const commitRename = () => {
+        const trimmed = editName.trim();
+        if (trimmed && trimmed !== voiceEntry.name) {
+            onRename(index, trimmed);
+        } else {
+            setEditName(voiceEntry.name);
+        }
+        setEditing(false);
+    };
+
+    // Sync editName when voiceEntry.name changes externally
+    useEffect(() => { setEditName(voiceEntry.name); }, [voiceEntry.name]);
+
+    // Focus input when editing starts
+    useEffect(() => {
+        if (editing && nameInputRef.current) nameInputRef.current.focus();
+    }, [editing]);
+
     return (
         <div style={{
-            display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '10px',
+            display: 'flex', flexDirection: 'column', gap: '4px', padding: '10px 12px', borderRadius: '10px',
             background: 'rgba(0, 212, 255, 0.03)', border: '1px solid rgba(0, 212, 255, 0.08)', transition: 'background 0.2s',
-            overflow: 'hidden',
         }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(0, 212, 255, 0.06)'}
            onMouseLeave={e => e.currentTarget.style.background = 'rgba(0, 212, 255, 0.03)'}>
-            <audio ref={audioRef} src={objectUrl} preload="auto"
-                onLoadedMetadata={() => setAudioDuration(audioRef.current?.duration || 0)}
-                onEnded={() => { setPlaying(false); setProgress(0); }} style={{ display: 'none' }} />
-            {/* Play/Pause */}
-            <button onClick={togglePlay} style={{
-                width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
-                background: playing ? 'rgba(0,212,255,0.15)' : 'rgba(0,212,255,0.08)',
-                border: '1px solid rgba(0,212,255,0.2)', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00d4ff',
-            }}>
-                {playing ? (
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="#00d4ff"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+            {/* Name row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minHeight: '20px' }}>
+                {editing ? (
+                    <input
+                        ref={nameInputRef}
+                        value={editName}
+                        onChange={e => setEditName(e.target.value)}
+                        onBlur={commitRename}
+                        onKeyDown={e => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') { setEditName(voiceEntry.name); setEditing(false); } }}
+                        style={{
+                            flex: 1, padding: '2px 6px', borderRadius: '4px', fontSize: '11px',
+                            fontFamily: fontMono, fontWeight: 600, color: '#e8f4fd',
+                            background: 'rgba(0,212,255,0.08)', border: '1px solid rgba(0,212,255,0.2)',
+                            outline: 'none',
+                        }}
+                    />
                 ) : (
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="#00d4ff"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <span
+                        onClick={() => setEditing(true)}
+                        title="Click to rename"
+                        style={{
+                            flex: 1, fontFamily: fontMono, fontSize: '11px', fontWeight: 600,
+                            color: 'rgba(0,212,255,0.7)', cursor: 'text',
+                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            padding: '2px 0', borderBottom: '1px dashed transparent',
+                            transition: 'border-color 0.15s',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(0,212,255,0.25)'}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}
+                    >
+                        {voiceEntry.name}
+                    </span>
                 )}
-            </button>
-            <span style={{ fontFamily: fontMono, fontSize: '9px', color: 'rgba(0,212,255,0.6)', flexShrink: 0 }}>
-                {index + 1}
-            </span>
-            {/* Progress bar */}
-            <div onClick={seek} style={{
-                flex: 1, height: '5px', background: 'rgba(0,212,255,0.08)', borderRadius: '3px',
-                cursor: 'pointer', position: 'relative', minWidth: 0,
-            }}>
-                <div style={{
-                    width: audioDuration ? `${(progress / audioDuration) * 100}%` : '0%',
-                    height: '100%', borderRadius: '3px',
-                    background: 'linear-gradient(90deg, #00d4ff, #8b5cf6)', transition: playing ? 'none' : 'width 0.1s',
-                }} />
+                {/* Rename icon */}
+                {!editing && (
+                    <button onClick={() => setEditing(true)} title="Rename voice note"
+                        style={{
+                            background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
+                            color: 'rgba(0,212,255,0.25)', display: 'flex', alignItems: 'center',
+                            transition: 'color 0.15s', flexShrink: 0,
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'rgba(0,212,255,0.7)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,212,255,0.25)'}
+                    >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                    </button>
+                )}
+                <button onClick={() => onRemove(index)} title="Remove voice note"
+                    style={{
+                        background: 'none', border: 'none', color: 'rgba(244, 63, 94, 0.3)', fontSize: '10px',
+                        cursor: 'pointer', padding: '2px', flexShrink: 0, transition: 'color 0.2s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#f43f5e'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(244, 63, 94, 0.3)'}
+                >✕</button>
             </div>
-            <span style={{ fontFamily: fontMono, fontSize: '9px', color: 'rgba(0,212,255,0.4)', flexShrink: 0 }}>
-                {audioDuration ? fmtTime(audioDuration) : '--:--'}
-            </span>
-            {/* Volume */}
-            <input type="range" min="0" max="2" step="0.1" value={volume}
-                onChange={e => setVolume(parseFloat(e.target.value))}
-                title={`Volume: ${Math.round(volume * 100)}%`}
-                style={{ width: '40px', accentColor: '#00d4ff', flexShrink: 0 }} />
-            <button onClick={() => onRemove(index)} title="Remove voice note"
-                style={{
-                    background: 'none', border: 'none', color: 'rgba(244, 63, 94, 0.4)', fontSize: '11px',
-                    cursor: 'pointer', padding: '2px', flexShrink: 0, transition: 'color 0.2s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.color = '#f43f5e'}
-                onMouseLeave={e => e.currentTarget.style.color = 'rgba(244, 63, 94, 0.4)'}
-            >✕</button>
+            {/* Player controls row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <audio ref={audioRef} src={objectUrl} preload="auto"
+                    onLoadedMetadata={() => setAudioDuration(audioRef.current?.duration || 0)}
+                    onEnded={() => { setPlaying(false); setProgress(0); cancelAnimationFrame(animRef.current); }} style={{ display: 'none' }} />
+                {/* Play/Pause */}
+                <button onClick={togglePlay} style={{
+                    width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
+                    background: playing ? 'rgba(0,212,255,0.15)' : 'rgba(0,212,255,0.08)',
+                    border: '1px solid rgba(0,212,255,0.2)', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00d4ff',
+                    transition: 'all 0.15s',
+                }}>
+                    {playing ? (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="#00d4ff"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                    ) : (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="#00d4ff"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    )}
+                </button>
+                {/* Progress bar */}
+                <div onClick={seek} style={{
+                    flex: 1, height: '5px', background: 'rgba(0,212,255,0.08)', borderRadius: '3px',
+                    cursor: 'pointer', position: 'relative', minWidth: 0,
+                }}>
+                    <div style={{
+                        width: audioDuration ? `${(progress / audioDuration) * 100}%` : '0%',
+                        height: '100%', borderRadius: '3px',
+                        background: 'linear-gradient(90deg, #00d4ff, #8b5cf6)', transition: playing ? 'none' : 'width 0.1s',
+                    }} />
+                </div>
+                <span style={{ fontFamily: fontMono, fontSize: '9px', color: 'rgba(0,212,255,0.4)', flexShrink: 0 }}>
+                    {audioDuration ? `${fmtTime(progress)} / ${fmtTime(audioDuration)}` : '--:--'}
+                </span>
+                {/* Volume */}
+                <input type="range" min="0" max="2" step="0.1" value={volume}
+                    onChange={e => setVolume(parseFloat(e.target.value))}
+                    title={`Volume: ${Math.round(volume * 100)}%`}
+                    style={{ width: '40px', accentColor: '#00d4ff', flexShrink: 0 }} />
+            </div>
         </div>
     );
 }
@@ -709,7 +815,13 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                         });
                         // Use ref to get latest note state (avoid stale closure)
                         const latestNote = notesRef.current.find(n => n.id === currentNoteId);
-                        const newVoice = [...(latestNote?.voice_urls || []), res.data.url];
+                        const existingVoice = (latestNote?.voice_urls || []).map((v, i) => normalizeVoice(v, i));
+                        const newEntry = {
+                            url: res.data.url,
+                            name: `Voice Note ${existingVoice.length + 1}`,
+                            id: `v-${Date.now()}`,
+                        };
+                        const newVoice = [...existingVoice, newEntry];
                         await saveNote(currentNoteId, { voice_urls: newVoice });
                         setShowAudioPanel(true);
                         addToast({ type: 'success', icon: '◉', message: `Voice note saved (${result.duration}s)`, duration: 3000 });
@@ -730,8 +842,19 @@ export default function NotesWorkspace({ isOpen, onClose }) {
         if (!currentNoteId) return;
         const latestNote = notesRef.current.find(n => n.id === currentNoteId);
         if (!latestNote) return;
-        const newVoice = (latestNote.voice_urls || []).filter((_, i) => i !== index);
+        const normalized = (latestNote.voice_urls || []).map((v, i) => normalizeVoice(v, i));
+        const newVoice = normalized.filter((_, i) => i !== index);
         await saveNote(currentNoteId, { voice_urls: newVoice });
+    };
+
+    const handleRenameVoice = async (index, newName) => {
+        const currentNoteId = activeNoteIdRef.current;
+        if (!currentNoteId) return;
+        const latestNote = notesRef.current.find(n => n.id === currentNoteId);
+        if (!latestNote) return;
+        const normalized = (latestNote.voice_urls || []).map((v, i) => normalizeVoice(v, i));
+        normalized[index] = { ...normalized[index], name: newName };
+        await saveNote(currentNoteId, { voice_urls: normalized });
     };
 
     // ─── Drop Handler ───────────────────────────────────────────────────
@@ -1191,10 +1314,19 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                         </button>
                                         {/* Expanded panel */}
                                         {showAudioPanel && (
-                                            <div style={{ padding: '0 24px 12px', display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto' }}>
-                                                {activeNote.voice_urls.map((url, i) => (
-                                                    <VoicePlayer key={`voice-${i}`} url={url} index={i} onRemove={handleRemoveVoice} />
-                                                ))}
+                                            <div style={{ padding: '0 24px 12px', display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '280px', overflowY: 'auto' }}>
+                                                {activeNote.voice_urls.map((entry, i) => {
+                                                    const normalized = normalizeVoice(entry, i);
+                                                    return (
+                                                        <VoicePlayer
+                                                            key={normalized.id}
+                                                            voiceEntry={normalized}
+                                                            index={i}
+                                                            onRemove={handleRemoveVoice}
+                                                            onRename={handleRenameVoice}
+                                                        />
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>
