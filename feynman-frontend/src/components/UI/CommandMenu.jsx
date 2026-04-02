@@ -8,6 +8,7 @@ import useBrainStore from '../../store/brainStore';
 import { exportVault } from '../../hooks/useBrainData';
 import { generateVaultZip } from '../../lib/vaultExport';
 import VaultImportModal from './VaultImportModal';
+import { useResponsive } from '../../hooks/useResponsive';
 
 const font = "'SF Pro Display', -apple-system, sans-serif";
 const fontMono = "'SF Pro Text', -apple-system, sans-serif";
@@ -78,6 +79,7 @@ export default function CommandMenu({ onSelect, activePanel }) {
     const nodes = useBrainStore(s => s.nodes);
     const addToast = useBrainStore(s => s.addToast);
     const fadingCount = nodes.filter(n => (n.current_strength || 100) < 60).length;
+    const { isMobile, isTouchDevice } = useResponsive();
 
     // Vault sync tracking — detect if vault is out of date
     const lastSyncStr = typeof window !== 'undefined' ? localStorage.getItem('feynman_vault_last_sync') : null;
@@ -164,8 +166,9 @@ export default function CommandMenu({ onSelect, activePanel }) {
             ref={menuRef}
             style={{
                 position: 'fixed',
-                left: '20px',
-                bottom: '100px',
+                left: isMobile ? 'auto' : '20px',
+                right: isMobile ? '16px' : 'auto',
+                bottom: isMobile ? '80px' : '100px',
                 zIndex: 65,
             }}
         >
@@ -180,18 +183,19 @@ export default function CommandMenu({ onSelect, activePanel }) {
                         style={{
                             position: 'absolute',
                             bottom: '56px',
-                            left: 0,
+                            left: isMobile ? 'auto' : 0,
+                            right: isMobile ? 0 : 'auto',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '6px',
-                            padding: '10px',
+                            padding: isMobile ? '8px' : '10px',
                             borderRadius: '16px',
                             background: 'rgba(2, 8, 20, 0.95)',
-                            backdropFilter: 'blur(30px)',
-                            WebkitBackdropFilter: 'blur(30px)',
+                            backdropFilter: isTouchDevice ? 'blur(16px)' : 'blur(30px)',
+                            WebkitBackdropFilter: isTouchDevice ? 'blur(16px)' : 'blur(30px)',
                             border: '1px solid rgba(0, 212, 255, 0.1)',
                             boxShadow: '0 8px 40px rgba(0, 0, 0, 0.5), 0 0 60px rgba(0, 212, 255, 0.03)',
-                            minWidth: '180px',
+                            minWidth: isMobile ? '170px' : '180px',
                         }}
                     >
                         {/* Menu header */}
@@ -357,8 +361,8 @@ export default function CommandMenu({ onSelect, activePanel }) {
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.92 }}
                 style={{
-                    width: '48px',
-                    height: '48px',
+                    width: isMobile ? '52px' : '48px',
+                    height: isMobile ? '52px' : '48px',
                     borderRadius: '14px',
                     background: isOpen
                         ? 'rgba(0, 212, 255, 0.12)'

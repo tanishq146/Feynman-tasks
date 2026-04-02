@@ -8,6 +8,7 @@
 import { useState, useEffect, useRef } from 'react';
 import useBrainStore from '../../store/brainStore';
 import { LOBE_CONFIG } from '../Brain/BrainMesh';
+import { useResponsive } from '../../hooks/useResponsive';
 
 export default function LobeDiveTransition() {
     const activeLobeKey = useBrainStore((s) => s.activeLobeKey);
@@ -16,6 +17,7 @@ export default function LobeDiveTransition() {
     const [lobeKey, setLobeKey] = useState(null);
     const [fading, setFading] = useState(false);
     const prevLobeView = useRef(false);
+    const { isMobile } = useResponsive();
 
     useEffect(() => {
         if (isLobeView && !prevLobeView.current && activeLobeKey) {
@@ -49,16 +51,18 @@ export default function LobeDiveTransition() {
     const a = config.accent;
 
     // Generate ring data
-    const rings = Array.from({ length: 10 }, (_, i) => ({
+    const ringCount = isMobile ? 6 : 10;
+    const rings = Array.from({ length: ringCount }, (_, i) => ({
         delay: i * 60,
-        size: 40 + i * 30,
+        size: (isMobile ? 30 : 40) + i * (isMobile ? 25 : 30),
         color: i % 2 === 0 ? c : a,
     }));
 
     // Generate particles
-    const particles = Array.from({ length: 20 }, (_, i) => {
-        const angle = (i / 20) * Math.PI * 2;
-        const dist = 30 + Math.random() * 50;
+    const particleCount = isMobile ? 10 : 20;
+    const particles = Array.from({ length: particleCount }, (_, i) => {
+        const angle = (i / particleCount) * Math.PI * 2;
+        const dist = (isMobile ? 20 : 30) + Math.random() * (isMobile ? 30 : 50);
         return {
             id: i,
             tx: Math.cos(angle) * dist,
@@ -70,10 +74,11 @@ export default function LobeDiveTransition() {
     });
 
     // Speed lines
-    const speedLines = Array.from({ length: 16 }, (_, i) => ({
-        angle: (i / 16) * 360,
+    const lineCount = isMobile ? 8 : 16;
+    const speedLines = Array.from({ length: lineCount }, (_, i) => ({
+        angle: (i / lineCount) * 360,
         delay: i * 20,
-        len: 25 + Math.random() * 35,
+        len: (isMobile ? 15 : 25) + Math.random() * (isMobile ? 20 : 35),
     }));
 
     return (
@@ -231,12 +236,13 @@ export default function LobeDiveTransition() {
                 {/* Label */}
                 <div style={{
                     fontFamily: "'SF Pro Display', -apple-system, sans-serif",
-                    fontSize: '30px', fontWeight: 800,
+                    fontSize: isMobile ? '22px' : '30px', fontWeight: 800,
                     color: '#e8f4fd',
-                    letterSpacing: '6px',
+                    letterSpacing: isMobile ? '4px' : '6px',
                     textTransform: 'uppercase',
                     textShadow: `0 0 40px ${c}80, 0 0 80px ${c}40`,
                     position: 'relative',
+                    padding: isMobile ? '0 16px' : 0,
                 }}>
                     {config.label}
                 </div>

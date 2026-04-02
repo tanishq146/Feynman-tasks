@@ -5,6 +5,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
+import { useResponsive } from '../../hooks/useResponsive';
 
 const RANDOM_FACTS = [
     "Your brain generates about 70,000 thoughts per day.",
@@ -35,6 +36,7 @@ const fadeUp = {
 
 export default function AuthScreen() {
     const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
+    const { isMobile, isTouchDevice } = useResponsive();
     const [mode, setMode] = useState('login'); // 'login' | 'signup'
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -44,8 +46,10 @@ export default function AuthScreen() {
     const emailRef = useRef(null);
 
     // Precompute particle positions
+    // Fewer particles on mobile for performance
+    const particleCount = isMobile ? 15 : 35;
     const particles = useMemo(() =>
-        Array.from({ length: 35 }).map((_, i) => ({
+        Array.from({ length: particleCount }).map((_, i) => ({
             x: Math.random() * 100,
             y: 20 + Math.random() * 70,
             size: 1 + Math.random() * 2,
@@ -55,7 +59,7 @@ export default function AuthScreen() {
             xDrift: (Math.random() - 0.5) * 20,
             isPurple: i % 6 === 0,
         })),
-        []);
+        [particleCount]);
 
     const particleCSS = useMemo(() => `
     @keyframes floatParticle {
@@ -180,11 +184,11 @@ export default function AuthScreen() {
                 transition={{ duration: 2, ease: [0.25, 0.1, 0.25, 1] }}
                 style={{
                     position: 'absolute',
-                    width: '500px',
-                    height: '500px',
+                    width: isMobile ? '300px' : '500px',
+                    height: isMobile ? '300px' : '500px',
                     borderRadius: '50%',
                     background: 'radial-gradient(circle, rgba(0, 212, 255, 0.06) 0%, rgba(124, 58, 237, 0.03) 40%, transparent 70%)',
-                    filter: 'blur(40px)',
+                    filter: isMobile ? 'blur(20px)' : 'blur(40px)',
                     pointerEvents: 'none',
                 }}
             />
@@ -199,7 +203,7 @@ export default function AuthScreen() {
                     rotate: { duration: 30, repeat: Infinity, ease: 'linear' },
                 }}
                 style={{
-                    position: 'absolute', width: '300px', height: '300px', borderRadius: '50%',
+                    position: 'absolute', width: isMobile ? '200px' : '300px', height: isMobile ? '200px' : '300px', borderRadius: '50%',
                     border: '1px solid rgba(0, 212, 255, 0.06)', pointerEvents: 'none',
                 }}
             />
@@ -209,13 +213,13 @@ export default function AuthScreen() {
                 variants={fadeUp}
                 style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    gap: '10px', marginBottom: '36px', zIndex: 2,
+                    gap: isMobile ? '6px' : '10px', marginBottom: isMobile ? '24px' : '36px', zIndex: 2,
                 }}
             >
                 <h1
                     style={{
                         fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
-                        fontSize: '28px', fontWeight: 700, letterSpacing: '6px', textTransform: 'uppercase',
+                        fontSize: isMobile ? '22px' : '28px', fontWeight: 700, letterSpacing: isMobile ? '4px' : '6px', textTransform: 'uppercase',
                         background: 'linear-gradient(135deg, #00d4ff, #7c3aed)',
                         WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0,
                     }}
@@ -385,9 +389,10 @@ export default function AuthScreen() {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.2, duration: 1.5 }}
                 style={{
-                    position: 'absolute', bottom: '30px',
+                    position: 'absolute', bottom: isMobile ? '16px' : '30px',
                     fontFamily: "'SF Pro Text', -apple-system, sans-serif",
-                    fontSize: '11px', color: 'rgba(74, 158, 186, 0.4)', letterSpacing: '1.5px',
+                    fontSize: isMobile ? '10px' : '11px', color: 'rgba(74, 158, 186, 0.4)', letterSpacing: isMobile ? '1px' : '1.5px',
+                    padding: isMobile ? '0 16px' : 0, textAlign: 'center',
                 }}
             >
                 Knowledge that breathes, connects, and evolves

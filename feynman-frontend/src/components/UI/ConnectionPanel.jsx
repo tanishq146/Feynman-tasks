@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import useBrainStore from '../../store/brainStore';
+import { useResponsive } from '../../hooks/useResponsive';
 
 // ─── Connection Type Config ─────────────────────────────────
 const typeConfig = {
@@ -51,6 +52,7 @@ export default function ConnectionPanel() {
     const clearEdge = useBrainStore((s) => s.clearEdge);
     const nodes = useBrainStore((s) => s.nodes);
     const selectNode = useBrainStore((s) => s.selectNode);
+    const { isMobile, isTouchDevice } = useResponsive();
 
     const { sourceNode, targetNode, config } = useMemo(() => {
         if (!selectedEdge) return {};
@@ -80,8 +82,8 @@ export default function ConnectionPanel() {
                 borderRadius: '20px',
                 border: `1px solid ${config.border}`,
                 background: 'rgba(2, 8, 20, 0.97)',
-                backdropFilter: 'blur(40px)',
-                WebkitBackdropFilter: 'blur(40px)',
+                backdropFilter: isTouchDevice ? 'blur(20px)' : 'blur(40px)',
+                WebkitBackdropFilter: isTouchDevice ? 'blur(20px)' : 'blur(40px)',
                 boxShadow: `
                     0 0 60px rgba(0, 0, 0, 0.5),
                     0 0 30px ${config.bg},
@@ -106,7 +108,7 @@ export default function ConnectionPanel() {
             />
 
             {/* ─── Header ─── */}
-            <div style={{ padding: '24px 24px 0' }}>
+            <div style={{ padding: isMobile ? '20px 16px 0' : '24px 24px 0' }}>
                 {/* Close button */}
                 <button
                     onClick={clearEdge}
@@ -185,7 +187,7 @@ export default function ConnectionPanel() {
             </div>
 
             {/* ─── Visual Connection Diagram ─── */}
-            <div style={{ padding: '20px 24px' }}>
+            <div style={{ padding: isMobile ? '16px 16px' : '20px 24px' }}>
                 <div
                     style={{
                         display: 'flex',
@@ -263,7 +265,7 @@ export default function ConnectionPanel() {
             </div>
 
             {/* ─── Strength Meter ─── */}
-            <div style={{ padding: '0 24px 20px' }}>
+            <div style={{ padding: isMobile ? '0 16px 16px' : '0 24px 20px' }}>
                 <div
                     style={{
                         display: 'flex',
@@ -315,7 +317,7 @@ export default function ConnectionPanel() {
             </div>
 
             {/* ─── Reason / Explanation ─── */}
-            <div style={{ padding: '0 24px 24px' }}>
+            <div style={{ padding: isMobile ? '0 16px 20px' : '0 24px 24px' }}>
                 <div
                     style={{
                         fontSize: '10px',

@@ -3,6 +3,7 @@
 // Supports drag-and-drop of .md files and .zip archives.
 
 import { useState, useRef, useCallback } from 'react';
+import { useResponsive } from '../../hooks/useResponsive';
 import { motion, AnimatePresence } from 'framer-motion';
 import { parseImportFiles, importToFeynman } from '../../lib/vaultImport';
 import { ingestKnowledge } from '../../hooks/useBrainData';
@@ -19,6 +20,7 @@ export default function VaultImportModal({ isOpen, onClose }) {
     const [results, setResults] = useState(null);
     const fileInputRef = useRef(null);
     const addToast = useBrainStore(s => s.addToast);
+    const { isMobile, isTouchDevice } = useResponsive();
 
     const handleFiles = useCallback(async (files) => {
         try {
@@ -117,17 +119,19 @@ export default function VaultImportModal({ isOpen, onClose }) {
                     transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                     onClick={e => e.stopPropagation()}
                     style={{
-                        width: '520px',
-                        maxHeight: '80vh',
+                        width: isMobile ? '95vw' : '520px',
+                        maxHeight: isMobile ? '90vh' : '80vh',
                         background: 'rgba(2, 8, 20, 0.97)',
                         border: '1px solid rgba(0, 212, 255, 0.12)',
-                        borderRadius: '20px',
-                        padding: '32px',
+                        borderRadius: isMobile ? '16px' : '20px',
+                        padding: isMobile ? '20px 16px' : '32px',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '20px',
+                        gap: isMobile ? '16px' : '20px',
                         boxShadow: '0 24px 80px rgba(0, 0, 0, 0.6), 0 0 80px rgba(0, 212, 255, 0.04)',
                         overflowY: 'auto',
+                        backdropFilter: isTouchDevice ? 'blur(16px)' : 'blur(30px)',
+                        WebkitBackdropFilter: isTouchDevice ? 'blur(16px)' : 'blur(30px)',
                     }}
                 >
                     {/* Header */}

@@ -9,6 +9,7 @@ import {
     gradeStudyAnswer,
     getSessionSummary,
 } from '../../hooks/useBrainData';
+import { useResponsive } from '../../hooks/useResponsive';
 
 // ─── Streak Helpers ─────────────────────────────────────────────────────────
 
@@ -689,6 +690,8 @@ export default function StudyMode({ isOpen, onClose, prefilteredNodeIds }) {
         setFeynmanSummary('');
     }, []);
 
+    const { isMobile, isTouchDevice } = useResponsive();
+
     if (!isOpen) return null;
 
     return (
@@ -700,14 +703,14 @@ export default function StudyMode({ isOpen, onClose, prefilteredNodeIds }) {
                 style={{
                     position: 'fixed', inset: 0, zIndex: 100,
                     background: 'rgba(2,8,20,0.98)',
-                    backdropFilter: 'blur(30px)',
+                    backdropFilter: isTouchDevice ? 'blur(16px)' : 'blur(30px)',
                     display: 'flex', flexDirection: 'column',
                 }}
             >
                 {/* Top bar */}
                 <div style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '20px 28px', borderBottom: '1px solid rgba(255,255,255,0.04)', flexShrink: 0,
+                    padding: isMobile ? '14px 14px' : '20px 28px', borderBottom: '1px solid rgba(255,255,255,0.04)', flexShrink: 0,
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         {/* Back button */}
@@ -732,7 +735,7 @@ export default function StudyMode({ isOpen, onClose, prefilteredNodeIds }) {
                             </svg>
                         </motion.button>
                         <span style={{ color: '#00d4ff', fontSize: '14px' }}>✦</span>
-                        <h2 style={{ fontFamily: font, fontSize: '16px', fontWeight: 700, color: '#e8f4fd', letterSpacing: '2px', textTransform: 'uppercase', margin: 0 }}>
+                        <h2 style={{ fontFamily: font, fontSize: isMobile ? '13px' : '16px', fontWeight: 700, color: '#e8f4fd', letterSpacing: isMobile ? '1px' : '2px', textTransform: 'uppercase', margin: 0 }}>
                             Study Mode
                         </h2>
                     </div>

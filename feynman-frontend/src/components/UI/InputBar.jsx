@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { ingestKnowledge } from '../../hooks/useBrainData';
 import useBrainStore from '../../store/brainStore';
+import { useResponsive } from '../../hooks/useResponsive';
 
 // ─── Lobe options for the picker ────────────────────────────────────────────
 const LOBE_OPTIONS = [
@@ -23,6 +24,7 @@ export default function InputBar() {
     const inputRef = useRef(null);
     const dragControls = useDragControls();
     const { setIngesting, addToast } = useBrainStore();
+    const { isMobile, isTouchDevice } = useResponsive();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -64,7 +66,7 @@ export default function InputBar() {
 
     return (
         <motion.div
-            drag
+            drag={!isTouchDevice}
             dragControls={dragControls}
             dragListener={false}
             dragMomentum={false}
@@ -82,13 +84,13 @@ export default function InputBar() {
             transition={{ delay: 0.5, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             style={{
                 position: 'fixed',
-                bottom: '32px',
+                bottom: isMobile ? '16px' : '32px',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 zIndex: 50,
                 width: '100%',
-                maxWidth: '600px',
-                padding: '0 24px',
+                maxWidth: isMobile ? '95%' : '600px',
+                padding: isMobile ? '0 8px' : '0 24px',
             }}
         >
             {/* ─── Lobe Picker Dropdown ─── */}
@@ -242,8 +244,9 @@ export default function InputBar() {
                         )}
                     </AnimatePresence>
 
-                    <div style={{ display: 'flex', alignItems: 'center', padding: '4px 8px' }}>
-                        {/* Drag Handle */}
+                    <div style={{ display: 'flex', alignItems: 'center', padding: isMobile ? '2px 4px' : '4px 8px' }}>
+                        {/* Drag Handle — hidden on touch devices */}
+                        {!isTouchDevice && (
                         <div
                             onPointerDown={startDrag}
                             style={{
@@ -277,6 +280,13 @@ export default function InputBar() {
                             </svg>
                             <span>✦</span>
                         </div>
+                        )}
+                        {/* Feynman icon for mobile (replaces drag handle) */}
+                        {isTouchDevice && (
+                            <div style={{ padding: '10px 8px 10px 12px', color: currentColor, fontSize: '16px', flexShrink: 0 }}>
+                                <span>✦</span>
+                            </div>
+                        )}
 
                         {/* Input */}
                         <input
@@ -335,7 +345,7 @@ export default function InputBar() {
                                     }}
                                 >
                                     <span style={{ fontSize: '14px' }}>{selectedLobe.icon}</span>
-                                    <span style={{
+                                    {!isMobile && <span style={{
                                         fontFamily: "'SF Pro Text', -apple-system, sans-serif",
                                         fontSize: '11px',
                                         fontWeight: 600,
@@ -343,7 +353,7 @@ export default function InputBar() {
                                         letterSpacing: '0.5px',
                                     }}>
                                         {selectedLobe.label}
-                                    </span>
+                                    </span>}
                                     <span style={{
                                         fontSize: '8px',
                                         color: currentColor,

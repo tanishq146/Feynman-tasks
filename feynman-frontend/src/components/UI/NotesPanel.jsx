@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useBrainStore from '../../store/brainStore';
 import api from '../../lib/api';
+import { useResponsive } from '../../hooks/useResponsive';
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
 
@@ -246,6 +247,7 @@ export default function NotesPanel() {
     const nodeId = useBrainStore((s) => s.notesPanelNodeId);
     const closePanel = useBrainStore((s) => s.closeNotesPanel);
     const getNodeById = useBrainStore((s) => s.getNodeById);
+    const { isMobile, isTouchDevice } = useResponsive();
 
     const [notes, setNotes] = useState([]);
     const [loadingNotes, setLoadingNotes] = useState(false);
@@ -369,10 +371,15 @@ export default function NotesPanel() {
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: 460, opacity: 0 }}
                 transition={{ type: 'spring', damping: 28, stiffness: 350 }}
-                style={panelStyle}
+                style={{
+                    ...panelStyle,
+                    width: isMobile ? '100%' : '460px',
+                    backdropFilter: isTouchDevice ? 'blur(16px)' : 'blur(30px)',
+                    WebkitBackdropFilter: isTouchDevice ? 'blur(16px)' : 'blur(30px)',
+                }}
             >
                 {/* ─── Header ─── */}
-                <div style={headerStyle}>
+                <div style={{ ...headerStyle, padding: isMobile ? '16px 14px 12px' : headerStyle.padding }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
                             <div style={{
@@ -417,7 +424,7 @@ export default function NotesPanel() {
                 </div>
 
                 {/* ─── Notes List ─── */}
-                <div style={scrollStyle}>
+                <div style={{ ...scrollStyle, padding: isMobile ? '12px 14px' : scrollStyle.padding }}>
                     {loadingNotes ? (
                         <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(232, 244, 253, 0.3)' }}>
                             <div style={{
@@ -528,7 +535,7 @@ export default function NotesPanel() {
                 </div>
 
                 {/* ─── Composer ─── */}
-                <div style={composerStyle}>
+                <div style={{ ...composerStyle, padding: isMobile ? '12px 14px 16px' : composerStyle.padding }}>
 
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
                         <textarea

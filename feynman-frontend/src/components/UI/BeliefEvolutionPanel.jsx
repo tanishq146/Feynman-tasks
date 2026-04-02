@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../lib/api';
+import { useResponsive } from '../../hooks/useResponsive';
 
 
 const sfDisplay = "'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
@@ -17,6 +18,7 @@ export default function BeliefEvolutionPanel({ isOpen, onClose }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const { isMobile, isTouchDevice } = useResponsive();
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -62,20 +64,20 @@ export default function BeliefEvolutionPanel({ isOpen, onClose }) {
                     style={{
                         position: 'fixed',
                         left: 0, top: 0, bottom: 0,
-                        width: '360px',
+                        width: isMobile ? '100%' : '360px',
                         zIndex: 55,
                         background: 'rgba(2, 6, 16, 0.95)',
-                        backdropFilter: 'blur(30px)',
-                        WebkitBackdropFilter: 'blur(30px)',
-                        borderRight: '1px solid rgba(0, 212, 255, 0.1)',
+                        backdropFilter: isTouchDevice ? 'blur(16px)' : 'blur(30px)',
+                        WebkitBackdropFilter: isTouchDevice ? 'blur(16px)' : 'blur(30px)',
+                        borderRight: isMobile ? 'none' : '1px solid rgba(0, 212, 255, 0.1)',
                         display: 'flex',
                         flexDirection: 'column',
-                        boxShadow: '4px 0 40px rgba(0, 0, 0, 0.5)',
+                        boxShadow: isMobile ? 'none' : '4px 0 40px rgba(0, 0, 0, 0.5)',
                     }}
                 >
                     {/* Header */}
                     <div style={{
-                        padding: '20px 20px 16px',
+                        padding: isMobile ? '16px 14px 12px' : '20px 20px 16px',
                         borderBottom: '1px solid rgba(0, 212, 255, 0.08)',
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

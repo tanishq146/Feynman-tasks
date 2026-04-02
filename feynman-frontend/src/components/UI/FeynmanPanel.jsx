@@ -5,6 +5,7 @@ import { reviewNode, getNodeConnections, fetchFeynmanExtras, gradeChallenge, gra
 import { timeUntilThreshold } from '../../hooks/useDecayTicker';
 import ForgettingCurve from './ForgettingCurve';
 import { sf, sfT, body, timeAgo, Icons, GlassCard, SectionHead, Accordion, Metric, StrengthBar, Loader, RealLifeMoment, FeynmanChallenge, TeachIt, KnowledgeGaps } from './FeynmanPanelSections';
+import { useResponsive } from '../../hooks/useResponsive';
 
 const TABS = [
     { key: 'overview', label: 'Overview', icon: (c) => Icons.node(c, 12) },
@@ -44,6 +45,7 @@ export default function FeynmanPanel() {
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState('');
     const [isSavingEdit, setIsSavingEdit] = useState(false);
+    const { isMobile, isTouchDevice } = useResponsive();
 
     useEffect(() => { if (selectedNode?.id) getNodeConnections(selectedNode.id).then(setConnections).catch(() => setConnections([])); else setConnections([]); }, [selectedNode?.id]);
 
@@ -112,13 +114,13 @@ export default function FeynmanPanel() {
             {isOpen && selectedNode && (<>
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { if (isExpanded) setIsExpanded(false); else clearSelection(); }} style={{ position: 'fixed', inset: 0, background: isExpanded ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.35)', zIndex: 55, backdropFilter: 'blur(4px)', transition: 'background 0.3s' }} />
 
-                <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }} style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: isExpanded ? '100vh' : '65vh', maxHeight: isExpanded ? '100vh' : '740px', zIndex: 60, background: 'linear-gradient(180deg, rgba(4,10,24,0.99) 0%, rgba(2,6,16,0.99) 100%)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', borderTop: isExpanded ? 'none' : `1px solid ${sc}20`, borderRadius: isExpanded ? 0 : '24px 24px 0 0', overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'height 0.4s cubic-bezier(0.4,0,0.2,1), max-height 0.4s, border-radius 0.3s' }}>
+                <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }} style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: isMobile ? '90vh' : isExpanded ? '100vh' : '65vh', maxHeight: isMobile ? '90vh' : isExpanded ? '100vh' : '740px', zIndex: 60, background: 'linear-gradient(180deg, rgba(4,10,24,0.99) 0%, rgba(2,6,16,0.99) 100%)', backdropFilter: isTouchDevice ? 'blur(20px)' : 'blur(40px)', WebkitBackdropFilter: isTouchDevice ? 'blur(20px)' : 'blur(40px)', borderTop: isExpanded ? 'none' : `1px solid ${sc}20`, borderRadius: isMobile ? '20px 20px 0 0' : isExpanded ? 0 : '24px 24px 0 0', overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'height 0.4s cubic-bezier(0.4,0,0.2,1), max-height 0.4s, border-radius 0.3s' }}>
 
                     {/* Accent gradient line */}
                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, transparent, ${sc}, transparent)`, opacity: 0.6 }} />
 
                     {/* ═══ HEADER ═══ */}
-                    <div style={{ padding: isExpanded ? '22px 32px 0' : '18px 24px 0', flexShrink: 0 }}>
+                    <div style={{ padding: isMobile ? '14px 14px 0' : isExpanded ? '22px 32px 0' : '18px 24px 0', flexShrink: 0 }}>
                         {/* Row 1: Title + Actions */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
@@ -126,7 +128,7 @@ export default function FeynmanPanel() {
                                     <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: sc, boxShadow: `0 0 14px ${sc}80` }} />
                                     <div style={{ position: 'absolute', inset: '-3px', borderRadius: '50%', border: `1px solid ${sc}40`, animation: 'pulse-ring 2s ease-in-out infinite' }} />
                                 </div>
-                                <h2 style={{ fontFamily: sf, fontSize: isExpanded ? '22px' : '17px', fontWeight: 700, color: '#e8f4fd', letterSpacing: '0.3px', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: isExpanded ? 'normal' : 'nowrap' }}>{selectedNode.title}</h2>
+                                <h2 style={{ fontFamily: sf, fontSize: isMobile ? '15px' : isExpanded ? '22px' : '17px', fontWeight: 700, color: '#e8f4fd', letterSpacing: '0.3px', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: isExpanded ? 'normal' : 'nowrap' }}>{selectedNode.title}</h2>
                                 {extras?.feynman_certified && <span style={{ fontSize: '9px', color: '#00ff88', background: 'rgba(0,255,136,0.08)', padding: '3px 10px', borderRadius: '10px', border: '1px solid rgba(0,255,136,0.15)', fontFamily: sfT, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', flexShrink: 0, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>{Icons.check('#00ff88', 10)} CERTIFIED</span>}
                                 {/* ★ Crucial toggle — SVG star, no emoji */}
                                 <button onClick={handleToggleCrucial} disabled={togglingCrucial}
@@ -174,9 +176,9 @@ export default function FeynmanPanel() {
                                 {TABS.map(tab => {
                                     const active = activeTab === tab.key;
                                     return (
-                                        <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{ flex: 1, padding: '9px 0', borderRadius: '10px', border: 'none', background: active ? `${sc}12` : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.25s', position: 'relative' }}>
+                                        <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{ flex: 1, padding: isMobile ? '8px 0' : '9px 0', borderRadius: '10px', border: 'none', background: active ? `${sc}12` : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: isMobile ? '4px' : '6px', transition: 'all 0.25s', position: 'relative' }}>
                                             <span style={{ opacity: active ? 1 : 0.4, transition: 'opacity 0.25s', display: 'flex' }}>{tab.icon(active ? sc : 'rgba(255,255,255,0.4)')}</span>
-                                            <span style={{ fontFamily: sfT, fontSize: '10px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: active ? sc : 'rgba(255,255,255,0.3)', transition: 'color 0.25s' }}>{tab.label}</span>
+                                            {!isMobile && <span style={{ fontFamily: sfT, fontSize: '10px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: active ? sc : 'rgba(255,255,255,0.3)', transition: 'color 0.25s' }}>{tab.label}</span>}
                                             {active && <motion.div layoutId="tab-ind" style={{ position: 'absolute', bottom: '2px', left: '20%', right: '20%', height: '2px', borderRadius: '1px', background: sc }} transition={{ type: 'spring', stiffness: 400, damping: 30 }} />}
                                         </button>
                                     );
@@ -186,7 +188,7 @@ export default function FeynmanPanel() {
                     </div>
 
                     {/* ═══ CONTENT ═══ */}
-                    <div style={{ flex: 1, overflowY: 'auto', padding: isExpanded ? '20px 32px 28px' : '16px 24px 24px' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '12px 14px 20px' : isExpanded ? '20px 32px 28px' : '16px 24px 24px' }}>
                         {feynman ? (
                             <AnimatePresence mode="wait">
                                 <motion.div key={activeTab} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.25 }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -296,7 +298,7 @@ export default function FeynmanPanel() {
                     </div>
 
                     {/* ═══ FOOTER ═══ */}
-                    <div style={{ padding: '12px 24px 16px', borderTop: '1px solid rgba(255,255,255,0.04)', flexShrink: 0, display: 'flex', gap: '8px' }}>
+                    <div style={{ padding: isMobile ? '10px 14px 14px' : '12px 24px 16px', borderTop: '1px solid rgba(255,255,255,0.04)', flexShrink: 0, display: 'flex', gap: '8px' }}>
                         <motion.button whileHover={{ scale: 1.01, boxShadow: `0 0 30px ${sc}15` }} whileTap={{ scale: 0.98 }} onClick={handleReview} disabled={reviewing} style={{ flex: 1, padding: '13px', borderRadius: '12px', background: `linear-gradient(135deg, ${sc}10, ${sc}06)`, border: `1px solid ${sc}20`, color: sc, fontFamily: sf, fontSize: '12px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', cursor: reviewing ? 'wait' : 'pointer', opacity: reviewing ? 0.5 : 1, transition: 'all 0.3s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                             {Icons.review(sc, 14)} {reviewing ? 'Reviewing...' : 'Review — Reset 100%'}
                         </motion.button>

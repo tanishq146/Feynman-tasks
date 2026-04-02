@@ -17,6 +17,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../lib/api';
 import useBrainStore from '../../store/brainStore';
+import { useResponsive } from '../../hooks/useResponsive';
 
 const font = "'SF Pro Display', -apple-system, sans-serif";
 const fontMono = "'SF Pro Text', -apple-system, sans-serif";
@@ -578,6 +579,9 @@ export default function NotesWorkspace({ isOpen, onClose }) {
     const [approvingTitle, setApprovingTitle] = useState(null);
     const [dragOver, setDragOver] = useState(false);
     const [showAudioPanel, setShowAudioPanel] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    const { isMobile, isTouchDevice } = useResponsive();
 
     const addToast = useBrainStore(s => s.addToast);
     const editorRef = useRef(null);
@@ -941,12 +945,36 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                 animation: 'notesWorkspaceFadeIn 0.3s ease',
             }}
         >
+            {/* ═══ SIDEBAR OVERLAY BACKDROP (mobile only) ═══ */}
+            {isMobile && sidebarOpen && (
+                <div
+                    onClick={() => setSidebarOpen(false)}
+                    style={{
+                        position: 'fixed', inset: 0, zIndex: 301,
+                        background: 'rgba(0,0,0,0.5)',
+                        backdropFilter: 'blur(4px)',
+                        WebkitBackdropFilter: 'blur(4px)',
+                    }}
+                />
+            )}
+
             {/* ═══ SIDEBAR ═══════════════════════════════════════════════════ */}
             <div style={{
-                width: '280px', flexShrink: 0,
+                width: isMobile ? '280px' : '280px',
+                flexShrink: 0,
                 background: 'rgba(2, 8, 20, 0.98)',
                 borderRight: '1px solid rgba(0, 212, 255, 0.06)',
                 display: 'flex', flexDirection: 'column',
+                // Mobile: overlay sidebar
+                ...(isMobile ? {
+                    position: 'fixed',
+                    top: 0,
+                    bottom: 0,
+                    left: sidebarOpen ? 0 : '-290px',
+                    zIndex: 302,
+                    transition: 'left 0.3s cubic-bezier(0.22,1,0.36,1)',
+                    boxShadow: sidebarOpen ? '4px 0 30px rgba(0,0,0,0.5)' : 'none',
+                } : {}),
             }}>
                 {/* Sidebar Header */}
                 <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
@@ -1024,7 +1052,10 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                 key={note.id}
                                 note={note}
                                 isActive={note.id === activeNoteId}
-                                onClick={() => setActiveNoteId(note.id)}
+                                onClick={() => {
+                                    setActiveNoteId(note.id);
+                                    if (isMobile) setSidebarOpen(false);
+                                }}
                             />
                         ))
                     )}
@@ -1079,11 +1110,31 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                     <>
                         {/* Editor Toolbar */}
                         <div style={{
-                            padding: '12px 24px',
+                            padding: isMobile ? '10px 12px' : '12px 24px',
                             borderBottom: '1px solid rgba(255,255,255,0.04)',
                             display: 'flex', alignItems: 'center', gap: '8px',
                             flexShrink: 0,
+                            flexWrap: isMobile ? 'wrap' : 'nowrap',
                         }}>
+                            {/* Sidebar toggle (mobile only) */}
+                            {isMobile && (
+                                <button
+                                    onClick={() => setSidebarOpen(true)}
+                                    title="Open sidebar"
+                                    style={{
+                                        background: 'rgba(0,212,255,0.06)', border: '1px solid rgba(0,212,255,0.12)',
+                                        borderRadius: '8px', width: '32px', height: '32px',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        cursor: 'pointer', color: '#00d4ff', flexShrink: 0,
+                                    }}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                        <line x1="3" y1="6" x2="21" y2="6"/>
+                                        <line x1="3" y1="12" x2="21" y2="12"/>
+                                        <line x1="3" y1="18" x2="21" y2="18"/>
+                                    </svg>
+                                </button>
+                            )}
                             {/* Pin */}
                             <button
                                 onClick={() => handleTogglePin(activeNoteId)}
@@ -1202,15 +1253,15 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                     onChange={handleTitleChange}
                                     placeholder="Note title..."
                                     style={{
-                                        padding: '24px 40px 8px',
+                                        padding: isMobile ? '16px 16px 6px' : '24px 40px 8px',
                                         background: 'none', border: 'none', outline: 'none',
-                                        fontFamily: font, fontSize: '28px', fontWeight: 700,
+                                        fontFamily: font, fontSize: isMobile ? '22px' : '28px', fontWeight: 700,
                                         color: '#e8f4fd', letterSpacing: '-0.5px',
                                     }}
                                 />
 
                                 {/* ═══ BLOCK EDITOR — text + inline images like Obsidian ═══ */}
-                                <div style={{ flex: 1, minHeight: 0, padding: '8px 40px 40px', overflowY: 'auto' }}>
+                                <div style={{ flex: 1, minHeight: 0, padding: isMobile ? '6px 16px 24px' : '8px 40px 40px', overflowY: 'auto' }}>
                                     {(() => {
                                         const content = activeNote.content || '';
                                         const images = activeNote.images || [];

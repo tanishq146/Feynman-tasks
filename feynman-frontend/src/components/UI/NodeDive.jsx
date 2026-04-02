@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../lib/api';
 import useBrainStore from '../../store/brainStore';
+import { useResponsive } from '../../hooks/useResponsive';
 
 const sfDisplay = "'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
 const sfText = "'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
@@ -126,6 +127,7 @@ export default function NodeDive() {
     const nodeColor = statusColors[diveNode?.status] || '#00d4ff';
     const modeConfig = mode ? MODES[mode] : null;
     const activeColor = modeConfig?.color || nodeColor;
+    const { isMobile, isTouchDevice } = useResponsive();
 
     // ─── 3D Tilt handler ──────────────────────────────────
     const handleMouseMove = useCallback((e, key) => {
@@ -286,7 +288,7 @@ export default function NodeDive() {
                         style={{
                             position: 'absolute', inset: 0,
                             background: 'radial-gradient(ellipse at center, rgba(2, 6, 16, 0.92) 0%, rgba(2, 4, 8, 0.98) 70%)',
-                            backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)',
+                            backdropFilter: isTouchDevice ? 'blur(16px)' : 'blur(30px)', WebkitBackdropFilter: isTouchDevice ? 'blur(16px)' : 'blur(30px)',
                         }}
                     />
 
@@ -351,9 +353,10 @@ export default function NodeDive() {
                                     }}
                                 >
                                     <div style={{
-                                        fontFamily: sfDisplay, fontSize: '32px', fontWeight: 700,
-                                        color: '#e8f4fd', letterSpacing: '2px',
+                                        fontFamily: sfDisplay, fontSize: isMobile ? '22px' : '32px', fontWeight: 700,
+                                        color: '#e8f4fd', letterSpacing: isMobile ? '1px' : '2px',
                                         textShadow: `0 0 30px ${nodeColor}88`, marginBottom: '8px',
+                                        padding: isMobile ? '0 20px' : 0,
                                     }}>{diveNode?.title}</div>
                                     <div style={{
                                         fontFamily: sfText, fontSize: '13px', color: nodeColor,
@@ -376,8 +379,9 @@ export default function NodeDive() {
                                 style={{
                                     position: 'absolute', inset: 0,
                                     display: 'flex', flexDirection: 'column',
-                                    alignItems: 'center', justifyContent: 'center',
-                                    padding: '40px',
+                                    alignItems: 'center', justifyContent: isMobile ? 'flex-start' : 'center',
+                                    padding: isMobile ? '60px 16px 20px' : '40px',
+                                    overflowY: isMobile ? 'auto' : 'visible',
                                 }}
                             >
                                 {/* Ambient background glow for hovered mode */}
@@ -434,8 +438,9 @@ export default function NodeDive() {
                                         textTransform: 'uppercase', marginBottom: '10px',
                                     }}>Feynman Analysis</div>
                                     <div style={{
-                                        fontFamily: sfDisplay, fontSize: '30px', fontWeight: 700,
+                                        fontFamily: sfDisplay, fontSize: isMobile ? '22px' : '30px', fontWeight: 700,
                                         color: '#e8f4fd', letterSpacing: '1px',
+                                        padding: isMobile ? '0 8px' : 0,
                                     }}>{diveNode?.title}</div>
                                 </motion.div>
 
@@ -444,17 +449,18 @@ export default function NodeDive() {
                                     animate={{ opacity: 1 }}
                                     transition={{ delay: 0.2 }}
                                     style={{
-                                        fontFamily: sfText, fontSize: '14px',
+                                        fontFamily: sfText, fontSize: isMobile ? '13px' : '14px',
                                         color: 'rgba(232, 244, 253, 0.4)',
-                                        marginBottom: '48px', textAlign: 'center',
+                                        marginBottom: isMobile ? '24px' : '48px', textAlign: 'center',
                                     }}
                                 >Choose your analysis mode</motion.div>
 
                                 {/* Cards */}
                                 <div style={{
-                                    display: 'flex', gap: '28px',
+                                    display: 'flex', gap: isMobile ? '14px' : '28px',
                                     maxWidth: '760px', width: '100%',
                                     perspective: '1200px',
+                                    flexDirection: isMobile ? 'column' : 'row',
                                 }}>
                                     {['strict', 'nonstrict'].map((modeKey, idx) => {
                                         const cfg = MODES[modeKey];
@@ -472,9 +478,9 @@ export default function NodeDive() {
                                                     duration: 0.6,
                                                     ease: [0.22, 1, 0.36, 1],
                                                 }}
-                                                onMouseEnter={() => setHoveredMode(modeKey)}
-                                                onMouseMove={(e) => handleMouseMove(e, modeKey)}
-                                                onMouseLeave={() => handleMouseLeave(modeKey)}
+                                                onMouseEnter={() => !isTouchDevice && setHoveredMode(modeKey)}
+                                                onMouseMove={(e) => !isTouchDevice && handleMouseMove(e, modeKey)}
+                                                onMouseLeave={() => !isTouchDevice && handleMouseLeave(modeKey)}
                                                 onClick={() => handleSelectMode(modeKey)}
                                                 style={{
                                                     flex: 1,
@@ -504,7 +510,7 @@ export default function NodeDive() {
                                                 <div style={{
                                                     position: 'relative',
                                                     zIndex: 1,
-                                                    padding: '32px 28px',
+                                                    padding: isMobile ? '20px 18px' : '32px 28px',
                                                     borderRadius: '20px',
                                                     background: isHovered
                                                         ? `linear-gradient(160deg, ${cfg.bgHover} 0%, rgba(2, 6, 16, 0.95) 60%)`
@@ -590,9 +596,9 @@ export default function NodeDive() {
                                                     {/* Feature grid */}
                                                     <div style={{
                                                         display: 'grid',
-                                                        gridTemplateColumns: '1fr 1fr',
+                                                        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
                                                         gap: '8px',
-                                                        marginBottom: '24px',
+                                                        marginBottom: isMobile ? '16px' : '24px',
                                                     }}>
                                                         {cfg.features.flat().map((feat, j) => (
                                                             <div key={j} style={{
@@ -685,9 +691,9 @@ export default function NodeDive() {
                             >
                                 {/* Header */}
                                 <div style={{
-                                    padding: '16px 24px',
+                                    padding: isMobile ? '14px 14px' : '16px 24px',
                                     borderBottom: `1px solid ${activeColor}15`,
-                                    display: 'flex', alignItems: 'center', gap: '14px',
+                                    display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '14px',
                                     background: 'rgba(2, 6, 16, 0.6)',
                                 }}>
                                     <motion.button
@@ -713,7 +719,7 @@ export default function NodeDive() {
 
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{
-                                            fontFamily: sfDisplay, fontSize: '16px', fontWeight: 700,
+                                            fontFamily: sfDisplay, fontSize: isMobile ? '14px' : '16px', fontWeight: 700,
                                             color: '#e8f4fd', letterSpacing: '1px',
                                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                                         }}>{diveNode?.title}</div>
@@ -724,18 +730,18 @@ export default function NodeDive() {
                                         }}>{diveNode?.topic_category} · {modeConfig?.label}</div>
                                     </div>
 
-                                    {/* Mode badge */}
-                                    <div style={{
+                                    {/* Mode badge — hide on mobile to save space */}
+                                    {!isMobile && <div style={{
                                         padding: '5px 14px', borderRadius: '20px',
                                         background: `linear-gradient(135deg, ${activeColor}12, ${modeConfig?.colorAlt || activeColor}08)`,
                                         border: `1px solid ${activeColor}25`,
                                         fontFamily: sfText, fontSize: '11px', fontWeight: 600,
                                         color: activeColor, flexShrink: 0, letterSpacing: '0.5px',
-                                    }}>{modeConfig?.label}</div>
+                                    }}>{modeConfig?.label}</div>}
                                 </div>
 
                                 {/* Node Summary */}
-                                <div style={{ padding: '12px 24px', borderBottom: `1px solid ${activeColor}08` }}>
+                                <div style={{ padding: isMobile ? '10px 14px' : '12px 24px', borderBottom: `1px solid ${activeColor}08` }}>
                                     <div style={{
                                         padding: '12px 16px', borderRadius: '12px',
                                         background: `${activeColor}06`,
@@ -770,7 +776,7 @@ export default function NodeDive() {
 
                                 {/* Messages */}
                                 <div className="dive-chat-scroll" style={{
-                                    flex: 1, overflowY: 'auto', padding: '20px 24px',
+                                    flex: 1, overflowY: 'auto', padding: isMobile ? '14px 14px' : '20px 24px',
                                     display: 'flex', flexDirection: 'column', gap: '12px',
                                     maxWidth: '800px', margin: '0 auto', width: '100%',
                                 }}>
@@ -838,7 +844,7 @@ export default function NodeDive() {
 
                                 {/* Input */}
                                 <div style={{
-                                    padding: '12px 24px 20px',
+                                    padding: isMobile ? '10px 14px 16px' : '12px 24px 20px',
                                     borderTop: `1px solid ${activeColor}10`,
                                     maxWidth: '800px', margin: '0 auto', width: '100%',
                                 }}>

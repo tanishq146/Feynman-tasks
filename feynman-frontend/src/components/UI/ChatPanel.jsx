@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../lib/api';
+import { useResponsive } from '../../hooks/useResponsive';
 
 
 const sfDisplay = "'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
@@ -8,7 +9,9 @@ const sfText = "'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, san
 
 export default function ChatPanel({ isOpen = false, onClose }) {
     const [isExpanded, setIsExpanded] = useState(false);
-    const panelWidth = isExpanded ? 600 : 360;
+    const { isMobile, isTouchDevice } = useResponsive();
+    const effectiveExpanded = isMobile ? true : isExpanded;
+    const panelWidth = effectiveExpanded ? 600 : 360;
     const [messages, setMessages] = useState([
         { role: 'assistant', content: 'Hey! I\'m **Feynman** — your second brain. Ask me anything about what you\'ve learned, or just chat. ✦' }
     ]);
@@ -306,22 +309,22 @@ export default function ChatPanel({ isOpen = false, onClose }) {
                             left: 0,
                             top: 0,
                             bottom: 0,
-                            right: isExpanded ? 0 : 'auto',
-                            width: isExpanded ? '100%' : '360px',
+                            right: effectiveExpanded ? 0 : 'auto',
+                            width: isMobile ? '100%' : effectiveExpanded ? '100%' : '360px',
                             zIndex: 55,
-                            background: isExpanded ? 'rgba(2, 6, 16, 0.98)' : 'rgba(2, 6, 16, 0.95)',
-                            backdropFilter: 'blur(30px)',
-                            WebkitBackdropFilter: 'blur(30px)',
-                            borderRight: isExpanded ? 'none' : '1px solid rgba(0, 212, 255, 0.1)',
+                            background: effectiveExpanded ? 'rgba(2, 6, 16, 0.98)' : 'rgba(2, 6, 16, 0.95)',
+                            backdropFilter: isTouchDevice ? 'blur(16px)' : 'blur(30px)',
+                            WebkitBackdropFilter: isTouchDevice ? 'blur(16px)' : 'blur(30px)',
+                            borderRight: effectiveExpanded ? 'none' : '1px solid rgba(0, 212, 255, 0.1)',
                             display: 'flex',
                             flexDirection: 'column',
-                            boxShadow: isExpanded ? 'none' : '4px 0 40px rgba(0, 0, 0, 0.5)',
+                            boxShadow: effectiveExpanded ? 'none' : '4px 0 40px rgba(0, 0, 0, 0.5)',
                             transition: 'width 0.4s cubic-bezier(0.22, 1, 0.36, 1), background 0.4s ease, right 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
                         }}
                     >
                         {/* Header */}
                         <div style={{
-                            padding: '20px 20px 12px',
+                            padding: isMobile ? '16px 14px 10px' : '20px 20px 12px',
                             borderBottom: '1px solid rgba(0, 212, 255, 0.08)',
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -361,8 +364,8 @@ export default function ChatPanel({ isOpen = false, onClose }) {
                                     color: 'rgba(0, 212, 255, 0.5)', marginLeft: 'auto',
                                 }}>Your Second Brain</span>
 
-                                {/* Expand / Collapse toggle */}
-                                <motion.button
+                                {/* Expand / Collapse toggle — hidden on mobile (already full width) */}
+                                {!isMobile && <motion.button
                                     onClick={() => setIsExpanded(!isExpanded)}
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
@@ -384,7 +387,7 @@ export default function ChatPanel({ isOpen = false, onClose }) {
                                     }}
                                 >
                                     {isExpanded ? '⇋' : '⇔'}
-                                </motion.button>
+                                </motion.button>}
 
                                 {/* Close / Back button */}
                                 <motion.button
@@ -499,10 +502,10 @@ export default function ChatPanel({ isOpen = false, onClose }) {
                         <div
                             style={{
                                 flex: 1, overflowY: 'auto',
-                                padding: isExpanded ? '24px 32px' : '16px',
+                                padding: isMobile ? '12px' : effectiveExpanded ? '24px 32px' : '16px',
                                 display: 'flex', flexDirection: 'column', gap: '12px',
-                                maxWidth: isExpanded ? '800px' : 'none',
-                                margin: isExpanded ? '0 auto' : '0',
+                                maxWidth: effectiveExpanded ? '800px' : 'none',
+                                margin: effectiveExpanded ? '0 auto' : '0',
                                 width: '100%',
                             }}
                             className="chat-scrollbar"
@@ -653,10 +656,10 @@ export default function ChatPanel({ isOpen = false, onClose }) {
 
                         {/* Input Area */}
                         <div style={{
-                            padding: isExpanded ? '16px 32px 20px' : '12px 16px 16px',
+                            padding: isMobile ? '10px 12px 14px' : effectiveExpanded ? '16px 32px 20px' : '12px 16px 16px',
                             borderTop: '1px solid rgba(0, 212, 255, 0.08)',
-                            maxWidth: isExpanded ? '800px' : 'none',
-                            margin: isExpanded ? '0 auto' : '0',
+                            maxWidth: effectiveExpanded ? '800px' : 'none',
+                            margin: effectiveExpanded ? '0 auto' : '0',
                             width: '100%',
                         }}>
                             {/* Why Chain active status */}

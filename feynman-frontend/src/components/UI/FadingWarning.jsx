@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useBrainStore from '../../store/brainStore';
+import { useResponsive } from '../../hooks/useResponsive';
 
 const font = "'SF Pro Display', -apple-system, sans-serif";
 const fontMono = "'SF Pro Text', -apple-system, sans-serif";
@@ -13,6 +14,7 @@ export default function FadingWarning({ onStudyNow }) {
     const isLobeView = useBrainStore(s => s.isLobeView);
     const [dismissed, setDismissed] = useState(false);
     const [visible, setVisible] = useState(false);
+    const { isMobile, isTouchDevice } = useResponsive();
 
     const fadingNodes = nodes.filter(n => (n.current_strength || 100) < 60);
     const count = fadingNodes.length;
@@ -43,21 +45,23 @@ export default function FadingWarning({ onStudyNow }) {
                     transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                     style={{
                         position: 'fixed',
-                        top: '64px',
+                        top: isMobile ? '56px' : '64px',
                         left: '50%',
                         transform: 'translateX(-50%)',
                         zIndex: 80,
                         display: 'flex',
-                        alignItems: 'center',
-                        gap: '16px',
-                        padding: '12px 24px',
+                        alignItems: isMobile ? 'flex-start' : 'center',
+                        flexDirection: isMobile ? 'column' : 'row',
+                        gap: isMobile ? '10px' : '16px',
+                        padding: isMobile ? '12px 16px' : '12px 24px',
                         borderRadius: '14px',
                         background: 'rgba(255,68,102,0.08)',
-                        backdropFilter: 'blur(20px)',
-                        WebkitBackdropFilter: 'blur(20px)',
+                        backdropFilter: isTouchDevice ? 'blur(12px)' : 'blur(20px)',
+                        WebkitBackdropFilter: isTouchDevice ? 'blur(12px)' : 'blur(20px)',
                         border: '1px solid rgba(255,68,102,0.2)',
                         boxShadow: '0 4px 30px rgba(255,68,102,0.15)',
                         maxWidth: '90vw',
+                        width: isMobile ? 'calc(100vw - 32px)' : 'auto',
                     }}
                 >
                     {/* Pulsing dot */}
@@ -72,7 +76,7 @@ export default function FadingWarning({ onStudyNow }) {
                     />
 
                     {/* Text */}
-                    <p style={{ fontFamily: fontMono, fontSize: '13px', color: '#e8c8cc', margin: 0, whiteSpace: 'nowrap' }}>
+                    <p style={{ fontFamily: fontMono, fontSize: isMobile ? '12px' : '13px', color: '#e8c8cc', margin: 0, whiteSpace: isMobile ? 'normal' : 'nowrap' }}>
                         <strong style={{ color: '#ff4466' }}>{count} {count === 1 ? 'memory is' : 'memories are'} fading</strong>
                         <span style={{ color: '#9a7a80' }}> — review before they disappear</span>
                     </p>
@@ -102,6 +106,9 @@ export default function FadingWarning({ onStudyNow }) {
                             background: 'none', border: 'none', color: '#9a7a80',
                             fontSize: '14px', cursor: 'pointer', padding: '2px 6px',
                             transition: 'color 0.2s',
+                            position: isMobile ? 'absolute' : 'static',
+                            top: isMobile ? '8px' : undefined,
+                            right: isMobile ? '8px' : undefined,
                         }}
                         onMouseEnter={e => { e.currentTarget.style.color = '#e8c8cc'; }}
                         onMouseLeave={e => { e.currentTarget.style.color = '#9a7a80'; }}

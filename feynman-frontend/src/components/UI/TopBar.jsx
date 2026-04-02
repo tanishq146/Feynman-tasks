@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useBrainStore from '../../store/brainStore';
+import { useResponsive } from '../../hooks/useResponsive';
 
 const sfDisplay = "'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
 const sfText = "'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
@@ -52,6 +53,7 @@ export default function TopBar() {
     const highlightFading = useBrainStore((s) => s.highlightFading);
     const toggleHighlightFading = useBrainStore((s) => s.toggleHighlightFading);
     const selectNode = useBrainStore((s) => s.selectNode);
+    const { isMobile, isTablet, isTouchDevice } = useResponsive();
 
     const [isListOpen, setIsListOpen] = useState(false);
     const panelRef = useRef(null);
@@ -101,7 +103,7 @@ export default function TopBar() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '16px 28px',
+                padding: isMobile ? '12px 14px' : isTablet ? '14px 20px' : '16px 28px',
                 background: 'linear-gradient(to bottom, rgba(2, 4, 8, 0.8), transparent)',
                 pointerEvents: 'none',
             }}
@@ -120,10 +122,10 @@ export default function TopBar() {
                 <span
                     style={{
                         fontFamily: sfDisplay,
-                        fontSize: '18px',
+                        fontSize: isMobile ? '14px' : '18px',
                         fontWeight: 700,
                         color: '#e8f4fd',
-                        letterSpacing: '4px',
+                        letterSpacing: isMobile ? '2px' : '4px',
                         textTransform: 'uppercase',
                     }}
                 >
@@ -252,16 +254,17 @@ export default function TopBar() {
                             exit={{ opacity: 0, y: -10, scale: 0.95 }}
                             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                             style={{
-                                position: 'absolute',
-                                top: '48px',
-                                right: 0,
-                                width: '400px',
-                                maxHeight: '520px',
+                                position: isMobile ? 'fixed' : 'absolute',
+                                top: isMobile ? '56px' : '48px',
+                                right: isMobile ? '8px' : 0,
+                                left: isMobile ? '8px' : 'auto',
+                                width: isMobile ? 'auto' : '400px',
+                                maxHeight: isMobile ? '70vh' : '520px',
                                 overflowY: 'auto',
                                 borderRadius: '16px',
                                 background: 'rgba(2, 6, 16, 0.97)',
-                                backdropFilter: 'blur(40px)',
-                                WebkitBackdropFilter: 'blur(40px)',
+                                backdropFilter: isMobile ? 'blur(20px)' : 'blur(40px)',
+                                WebkitBackdropFilter: isMobile ? 'blur(20px)' : 'blur(40px)',
                                 border: '1px solid rgba(0, 212, 255, 0.1)',
                                 boxShadow: '0 20px 60px rgba(0, 0, 0, 0.6), 0 0 1px rgba(0, 212, 255, 0.2)',
                             }}

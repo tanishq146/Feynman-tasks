@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
 import useBrainStore from '../../store/brainStore';
 import { LOBE_CONFIG } from '../Brain/BrainMesh';
+import { useResponsive } from '../../hooks/useResponsive';
 
 // Shared position registry — nodes register their live positions,
 // connection threads read from this to stay perfectly aligned.
@@ -552,6 +553,7 @@ export default function LobeView() {
 
     // Timer for sidebar double-click detection
     const sidebarTimer = useRef(null);
+    const { isMobile, isTouchDevice } = useResponsive();
 
     const lobeConfig = activeLobeKey ? LOBE_CONFIG[activeLobeKey] : null;
 
@@ -627,7 +629,7 @@ export default function LobeView() {
                     transition={{ delay: 0.15, duration: 0.4, ease: 'easeOut' }}
                     style={{
                         position: 'absolute', top: 0, left: 0, right: 0, zIndex: 2,
-                        padding: '20px 28px',
+                        padding: isMobile ? '14px 14px' : '20px 28px',
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     }}
                 >
@@ -654,8 +656,8 @@ export default function LobeView() {
                     <div style={{ textAlign: 'center' }}>
                         <div style={{
                             fontFamily: "'SF Pro Display', -apple-system, sans-serif",
-                            fontSize: '20px', fontWeight: 700, color: c,
-                            letterSpacing: '4px', textTransform: 'uppercase',
+                            fontSize: isMobile ? '16px' : '20px', fontWeight: 700, color: c,
+                            letterSpacing: isMobile ? '2px' : '4px', textTransform: 'uppercase',
                             textShadow: `0 0 40px ${c}50, 0 0 80px ${c}20`,
                         }}>
                             {lobeConfig.label}
@@ -668,11 +670,11 @@ export default function LobeView() {
                             {lobeConfig.category} · {lobeNodes.length} node{lobeNodes.length !== 1 ? 's' : ''}
                         </div>
                     </div>
-                    <div style={{ width: '90px' }} />
+                    {!isMobile && <div style={{ width: '90px' }} />}
                 </motion.div>
 
-                {/* ─── Sidebar: Node List ─── */}
-                <motion.div
+                {/* ─── Sidebar: Node List ─── hidden on mobile */}
+                {!isMobile && <motion.div
                     initial={{ x: 30, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ delay: 0.3, duration: 0.4, ease: 'easeOut' }}
@@ -770,7 +772,7 @@ export default function LobeView() {
                             </button>
                         ))
                     )}
-                </motion.div>
+                </motion.div>}
             </motion.div>
         </AnimatePresence>
     );

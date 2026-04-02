@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useBrainStore from '../../store/brainStore';
+import { useResponsive } from '../../hooks/useResponsive';
 
 const sfDisplay = "'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
 const sfText = "'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
@@ -41,7 +42,12 @@ export default function AmbientHUD() {
             .slice(0, 4);
     }, [nodes]);
 
+    const { isMobile, isTablet } = useResponsive();
+
     if (nodes.length === 0) return null;
+
+    // On mobile, hide the entire HUD to keep the 3D scene clean
+    if (isMobile) return null;
 
     return (
         <>
@@ -296,8 +302,8 @@ export default function AmbientHUD() {
                 </div>
             </motion.div>
 
-            {/* ─── Top-Right Corner: Recent Activity ────────────── */}
-            {recentNodes.length > 0 && (
+            {/* ─── Top-Right Corner: Recent Activity ─── hide on tablet */}
+            {!isTablet && recentNodes.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
