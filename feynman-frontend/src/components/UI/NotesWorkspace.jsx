@@ -1339,49 +1339,6 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                         });
                                     })()}
                                 </div>
-
-                                {/* ═══ AUDIO PANEL — dedicated voice notes section at bottom ═══ */}
-                                {activeNote.voice_urls?.length > 0 && (
-                                    <div style={{
-                                        borderTop: '1px solid rgba(0, 212, 255, 0.08)',
-                                        background: 'rgba(0, 212, 255, 0.02)',
-                                        flexShrink: 0,
-                                    }}>
-                                        {/* Toggle header */}
-                                        <button onClick={() => setShowAudioPanel(prev => !prev)} style={{
-                                            width: '100%', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '8px',
-                                            background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-                                        }}>
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <rect x="9" y="2" width="6" height="11" rx="3" /><path d="M5 10a7 7 0 0 0 14 0" /><line x1="12" y1="17" x2="12" y2="22" />
-                                            </svg>
-                                            <span style={{ fontFamily: fontMono, fontSize: '10px', fontWeight: 600, color: 'rgba(0,212,255,0.5)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                                                Voice Notes ({activeNote.voice_urls.length})
-                                            </span>
-                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(0,212,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                                                style={{ marginLeft: 'auto', transform: showAudioPanel ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-                                                <polyline points="6 9 12 15 18 9" />
-                                            </svg>
-                                        </button>
-                                        {/* Expanded panel */}
-                                        {showAudioPanel && (
-                                            <div style={{ padding: '0 24px 12px', display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '280px', overflowY: 'auto' }}>
-                                                {activeNote.voice_urls.map((entry, i) => {
-                                                    const normalized = normalizeVoice(entry, i);
-                                                    return (
-                                                        <VoicePlayer
-                                                            key={normalized.id}
-                                                            voiceEntry={normalized}
-                                                            index={i}
-                                                            onRemove={handleRemoveVoice}
-                                                            onRename={handleRenameVoice}
-                                                        />
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
                             </div>
 
                             {/* AI Suggestions Panel */}
@@ -1462,6 +1419,49 @@ export default function NotesWorkspace({ isOpen, onClose }) {
                                 )}
                             </AnimatePresence>
                         </div>
+
+                        {/* ═══ VOICE NOTES PANEL — sits cleanly below editor+AI row, never overlaps ═══ */}
+                        {activeNote.voice_urls?.length > 0 && (
+                            <div style={{
+                                borderTop: '1px solid rgba(0, 212, 255, 0.08)',
+                                background: 'rgba(0, 212, 255, 0.02)',
+                                flexShrink: 0,
+                            }}>
+                                {/* Toggle header */}
+                                <button onClick={() => setShowAudioPanel(prev => !prev)} style={{
+                                    width: '100%', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '8px',
+                                    background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                                }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="9" y="2" width="6" height="11" rx="3" /><path d="M5 10a7 7 0 0 0 14 0" /><line x1="12" y1="17" x2="12" y2="22" />
+                                    </svg>
+                                    <span style={{ fontFamily: fontMono, fontSize: '10px', fontWeight: 600, color: 'rgba(0,212,255,0.5)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+                                        Voice Notes ({activeNote.voice_urls.length})
+                                    </span>
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(0,212,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                                        style={{ marginLeft: 'auto', transform: showAudioPanel ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                                        <polyline points="6 9 12 15 18 9" />
+                                    </svg>
+                                </button>
+                                {/* Expanded panel */}
+                                {showAudioPanel && (
+                                    <div style={{ padding: '0 24px 12px', display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '240px', overflowY: 'auto' }}>
+                                        {activeNote.voice_urls.map((entry, i) => {
+                                            const normalized = normalizeVoice(entry, i);
+                                            return (
+                                                <VoicePlayer
+                                                    key={normalized.id}
+                                                    voiceEntry={normalized}
+                                                    index={i}
+                                                    onRemove={handleRemoveVoice}
+                                                    onRename={handleRenameVoice}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </>
                 ) : (
                     /* Empty state */
