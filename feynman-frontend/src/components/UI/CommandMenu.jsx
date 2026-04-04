@@ -51,6 +51,15 @@ const menuItems = [
         colorBorder: 'rgba(245, 158, 11, 0.15)',
     },
     {
+        id: 'mirror',
+        icon: '🪞',
+        label: 'Mind Mirror',
+        description: 'Journal your psyche',
+        color: '#a78bfa',
+        colorBg: 'rgba(167, 139, 250, 0.08)',
+        colorBorder: 'rgba(167, 139, 250, 0.15)',
+    },
+    {
         id: 'vault',
         icon: '📦',
         label: 'Vault',

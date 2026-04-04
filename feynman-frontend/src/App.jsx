@@ -14,6 +14,7 @@ import LobeView from './components/UI/LobeView';
 import LobeDiveTransition from './components/UI/LobeDiveTransition';
 import NotesPanel from './components/UI/NotesPanel';
 import NotesWorkspace from './components/UI/NotesWorkspace';
+import MindMirror from './components/UI/MindMirror';
 import Toast from './components/UI/Toast';
 
 import AuthScreen from './components/UI/AuthScreen';
@@ -44,9 +45,10 @@ function FeynmanApp() {
   const [studyModeOpen, setStudyModeOpen] = useState(false);
   const [studyPrefilteredIds, setStudyPrefilteredIds] = useState(null);
   const [notesWorkspaceOpen, setNotesWorkspaceOpen] = useState(false);
+  const [mindMirrorOpen, setMindMirrorOpen] = useState(false);
 
   // Track which panel is currently active for the menu indicator
-  const activePanel = chatOpen ? 'chat' : beliefPanelOpen ? 'beliefs' : studyModeOpen ? 'study' : notesWorkspaceOpen ? 'notes' : null;
+  const activePanel = chatOpen ? 'chat' : beliefPanelOpen ? 'beliefs' : studyModeOpen ? 'study' : notesWorkspaceOpen ? 'notes' : mindMirrorOpen ? 'mirror' : null;
 
   const handleStudyFromWarning = useCallback((nodeIds) => {
     setStudyPrefilteredIds(nodeIds);
@@ -65,22 +67,32 @@ function FeynmanApp() {
       setBeliefPanelOpen(false);
       setStudyModeOpen(false);
       setNotesWorkspaceOpen(false);
+      setMindMirrorOpen(false);
     } else if (id === 'beliefs') {
       setBeliefPanelOpen(prev => !prev);
       setChatOpen(false);
       setStudyModeOpen(false);
       setNotesWorkspaceOpen(false);
+      setMindMirrorOpen(false);
     } else if (id === 'study') {
       setStudyPrefilteredIds(null);
       setStudyModeOpen(prev => !prev);
       setChatOpen(false);
       setBeliefPanelOpen(false);
       setNotesWorkspaceOpen(false);
+      setMindMirrorOpen(false);
     } else if (id === 'notes') {
       setNotesWorkspaceOpen(prev => !prev);
       setChatOpen(false);
       setBeliefPanelOpen(false);
       setStudyModeOpen(false);
+      setMindMirrorOpen(false);
+    } else if (id === 'mirror') {
+      setMindMirrorOpen(prev => !prev);
+      setChatOpen(false);
+      setBeliefPanelOpen(false);
+      setStudyModeOpen(false);
+      setNotesWorkspaceOpen(false);
     }
   }, []);
 
@@ -168,6 +180,9 @@ function FeynmanApp() {
 
       {/* Notes Workspace — full screen */}
       <NotesWorkspace isOpen={notesWorkspaceOpen} onClose={() => setNotesWorkspaceOpen(false)} />
+
+      {/* Mind Mirror — full screen journaling */}
+      <MindMirror isOpen={mindMirrorOpen} onClose={() => setMindMirrorOpen(false)} />
 
 
 

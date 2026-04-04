@@ -33,6 +33,7 @@ import beliefRoutes from './routes/beliefs.js';
 import studyRoutes from './routes/study.js';
 import notesRoutes from './routes/notes.js';
 import workspaceRoutes from './routes/workspace.js';
+import mindmirrorRoutes from './routes/mindmirror.js';
 
 
 // ─── Express App ────────────────────────────────────────────────────────────
@@ -83,6 +84,7 @@ app.use('/api/beliefs', requireAuth, beliefRoutes);
 app.use('/api/study', requireAuth, studyRoutes);
 app.use('/api/notes', requireAuth, notesRoutes);
 app.use('/api/workspace', requireAuth, workspaceRoutes);
+app.use('/api/mindmirror', requireAuth, mindmirrorRoutes);
 
 
 // ─── 404 Catch-all ──────────────────────────────────────────────────────────
