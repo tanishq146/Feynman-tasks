@@ -328,11 +328,12 @@ function normalizeVoice(entry, index) {
 }
 
 // ─── Audio Panel (dedicated voice notes section) ─────────────────────────────
+// Performance-critical: progress bar + time display use direct DOM refs
+// to avoid 60fps React re-renders during playback.
 
 function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
     const audioRef = useRef(null);
     const [playing, setPlaying] = useState(false);
-    const [progress, setProgress] = useState(0);
     const [audioDuration, setAudioDuration] = useState(0);
     const [volume, setVolume] = useState(1.0);
     const [editing, setEditing] = useState(false);
@@ -342,8 +343,16 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
     const audioCtxRef = useRef(null);
     const sourceConnected = useRef(false);
     const nameInputRef = useRef(null);
+    // Direct DOM refs for progress — NO useState, NO re-renders during playback
+    const progressBarRef = useRef(null);
+    const timeDisplayRef = useRef(null);
+    const durationRef = useRef(0); // mirror of audioDuration for rAF reads
+    const volumeRef = useRef(volume); // avoid stale closure in setupAudioContext
 
     const url = voiceEntry.url;
+
+    // Keep volumeRef in sync
+    useEffect(() => { volumeRef.current = volume; }, [volume]);
 
     // Create object URL from data URL for proper playback
     const [objectUrl, setObjectUrl] = useState(null);
@@ -379,11 +388,11 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
             source.connect(gain);
             gain.connect(ctx.destination);
             gainNodeRef.current = gain;
-            gain.gain.value = volume * 1.5;
+            gain.gain.value = volumeRef.current * 1.5; // use ref to avoid stale closure
             sourceConnected.current = true;
         } catch (e) {
             // Fallback: just set volume directly
-            if (audioRef.current) audioRef.current.volume = volume;
+            if (audioRef.current) audioRef.current.volume = Math.min(1, volumeRef.current);
         }
     }, []);
 
@@ -396,22 +405,58 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
         }
     }, [volume]);
 
-    // Clean up on unmount
+    const fmtTime = (s) => {
+        const m = Math.floor(s / 60);
+        const sec = Math.floor(s % 60);
+        return `${m}:${sec.toString().padStart(2, '0')}`;
+    };
+
+    // Update progress bar + time display via direct DOM manipulation (no React re-render)
+    const updateProgressDOM = useCallback((currentTime) => {
+        const dur = durationRef.current;
+        if (progressBarRef.current) {
+            const pct = dur > 0 ? (currentTime / dur) * 100 : 0;
+            progressBarRef.current.style.width = `${pct}%`;
+        }
+        if (timeDisplayRef.current && dur > 0) {
+            timeDisplayRef.current.textContent = `${fmtTime(currentTime)} / ${fmtTime(dur)}`;
+        }
+    }, []);
+
+    // rAF tick — writes directly to DOM, never calls setState
+    const tick = useCallback(() => {
+        if (audioRef.current && !audioRef.current.paused) {
+            updateProgressDOM(audioRef.current.currentTime);
+            animRef.current = requestAnimationFrame(tick);
+        }
+    }, [updateProgressDOM]);
+
+    // Full cleanup on unmount: stop audio, cancel rAF, close AudioContext
     useEffect(() => {
         return () => {
             if (animRef.current) cancelAnimationFrame(animRef.current);
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.removeAttribute('src');
+                audioRef.current.load(); // release resource
+            }
             if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
                 audioCtxRef.current.close().catch(() => {});
             }
         };
     }, []);
 
-    const tick = useCallback(() => {
-        if (audioRef.current) {
-            setProgress(audioRef.current.currentTime);
-            if (!audioRef.current.paused) animRef.current = requestAnimationFrame(tick);
-        }
+    const handleLoadedMetadata = useCallback(() => {
+        const dur = audioRef.current?.duration || 0;
+        setAudioDuration(dur);
+        durationRef.current = dur;
     }, []);
+
+    const handleEnded = useCallback(() => {
+        cancelAnimationFrame(animRef.current);
+        setPlaying(false);
+        updateProgressDOM(0);
+    }, [updateProgressDOM]);
 
     const togglePlay = () => {
         if (!audioRef.current) return;
@@ -432,14 +477,12 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
     };
 
     const seek = (e) => {
-        if (!audioRef.current || !audioDuration) return;
+        if (!audioRef.current || !durationRef.current) return;
         const rect = e.currentTarget.getBoundingClientRect();
         const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        audioRef.current.currentTime = pct * audioDuration;
-        setProgress(audioRef.current.currentTime);
+        audioRef.current.currentTime = pct * durationRef.current;
+        updateProgressDOM(audioRef.current.currentTime);
     };
-
-    const fmtTime = (s) => { const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}`; };
 
     const commitRename = () => {
         const trimmed = editName.trim();
@@ -527,8 +570,8 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
             {/* Player controls row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <audio ref={audioRef} src={objectUrl} preload="auto"
-                    onLoadedMetadata={() => setAudioDuration(audioRef.current?.duration || 0)}
-                    onEnded={() => { setPlaying(false); setProgress(0); cancelAnimationFrame(animRef.current); }} style={{ display: 'none' }} />
+                    onLoadedMetadata={handleLoadedMetadata}
+                    onEnded={handleEnded} style={{ display: 'none' }} />
                 {/* Play/Pause */}
                 <button onClick={togglePlay} style={{
                     width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
@@ -543,19 +586,21 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="#00d4ff"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                     )}
                 </button>
-                {/* Progress bar */}
+                {/* Progress bar — updated directly via ref, no re-renders */}
                 <div onClick={seek} style={{
                     flex: 1, height: '5px', background: 'rgba(0,212,255,0.08)', borderRadius: '3px',
                     cursor: 'pointer', position: 'relative', minWidth: 0,
                 }}>
-                    <div style={{
-                        width: audioDuration ? `${(progress / audioDuration) * 100}%` : '0%',
+                    <div ref={progressBarRef} style={{
+                        width: '0%',
                         height: '100%', borderRadius: '3px',
-                        background: 'linear-gradient(90deg, #00d4ff, #8b5cf6)', transition: playing ? 'none' : 'width 0.1s',
+                        background: 'linear-gradient(90deg, #00d4ff, #8b5cf6)',
+                        willChange: 'width',
                     }} />
                 </div>
-                <span style={{ fontFamily: fontMono, fontSize: '9px', color: 'rgba(0,212,255,0.4)', flexShrink: 0 }}>
-                    {audioDuration ? `${fmtTime(progress)} / ${fmtTime(audioDuration)}` : '--:--'}
+                {/* Time display — updated directly via ref, no re-renders */}
+                <span ref={timeDisplayRef} style={{ fontFamily: fontMono, fontSize: '9px', color: 'rgba(0,212,255,0.4)', flexShrink: 0 }}>
+                    {audioDuration ? `0:00 / ${fmtTime(audioDuration)}` : '--:--'}
                 </span>
                 {/* Volume */}
                 <input type="range" min="0" max="2" step="0.1" value={volume}
