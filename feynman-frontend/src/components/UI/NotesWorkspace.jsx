@@ -328,8 +328,14 @@ function normalizeVoice(entry, index) {
 }
 
 // ─── Audio Panel (dedicated voice notes section) ─────────────────────────────
-// Performance-critical: progress bar + time display use direct DOM refs
-// to avoid 60fps React re-renders during playback.
+// Production-ready voice player. All three historical bugs fixed:
+//   Bug 1 (duration 0:00): Imperative loadedmetadata/durationchange listeners
+//          + readyState check on mount, so duration is never missed.
+//   Bug 2 (100% progress on load): Bulletproof NaN/Infinity guard everywhere;
+//          progress clamped to [0,100] before touching DOM.
+//   Bug 3 (UI freeze): Zero React re-renders during playback. Progress bar
+//          and time display updated exclusively via direct DOM refs. Only
+//          play/pause state triggers a React render.
 
 function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
     const audioRef = useRef(null);
@@ -343,20 +349,22 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
     const audioCtxRef = useRef(null);
     const sourceConnected = useRef(false);
     const nameInputRef = useRef(null);
-    // Direct DOM refs for progress — NO useState, NO re-renders during playback
+    // Direct DOM refs — progress bar + time text are NEVER driven by React state
     const progressBarRef = useRef(null);
     const timeDisplayRef = useRef(null);
-    const durationRef = useRef(0); // mirror of audioDuration for rAF reads
-    const volumeRef = useRef(volume); // avoid stale closure in setupAudioContext
+    const durationRef = useRef(0);
+    const volumeRef = useRef(volume);
+    const mountedRef = useRef(true);
 
     const url = voiceEntry.url;
 
-    // Keep volumeRef in sync
+    // Keep volumeRef in sync (avoids stale closure in setupAudioContext)
     useEffect(() => { volumeRef.current = volume; }, [volume]);
 
-    // Create object URL from data URL for proper playback
+    // ── Object URL lifecycle ─────────────────────────────────────────────
     const [objectUrl, setObjectUrl] = useState(null);
     useEffect(() => {
+        let revoke = null;
         if (url && url.startsWith('data:')) {
             try {
                 const [header, b64] = url.split(',');
@@ -367,7 +375,7 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
                 const blob = new Blob([bytes], { type: mime });
                 const objUrl = URL.createObjectURL(blob);
                 setObjectUrl(objUrl);
-                return () => URL.revokeObjectURL(objUrl);
+                revoke = objUrl;
             } catch (e) {
                 console.error('Failed to create audio blob URL:', e);
                 setObjectUrl(url);
@@ -375,9 +383,10 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
         } else {
             setObjectUrl(url);
         }
+        return () => { if (revoke) URL.revokeObjectURL(revoke); };
     }, [url]);
 
-    // Set up Web Audio API gain node — only once per audio element
+    // ── Web Audio API gain node (volume boost) ───────────────────────────
     const setupAudioContext = useCallback(() => {
         if (!audioRef.current || sourceConnected.current) return;
         try {
@@ -388,15 +397,13 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
             source.connect(gain);
             gain.connect(ctx.destination);
             gainNodeRef.current = gain;
-            gain.gain.value = volumeRef.current * 1.5; // use ref to avoid stale closure
+            gain.gain.value = volumeRef.current * 1.5;
             sourceConnected.current = true;
         } catch (e) {
-            // Fallback: just set volume directly
             if (audioRef.current) audioRef.current.volume = Math.min(1, volumeRef.current);
         }
     }, []);
 
-    // Update volume on gain node when slider changes
     useEffect(() => {
         if (gainNodeRef.current) {
             gainNodeRef.current.gain.value = volume * 1.5;
@@ -405,25 +412,36 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
         }
     }, [volume]);
 
+    // ── Helpers ──────────────────────────────────────────────────────────
     const fmtTime = (s) => {
+        if (!isFinite(s) || isNaN(s) || s < 0) return '0:00';
         const m = Math.floor(s / 60);
         const sec = Math.floor(s % 60);
         return `${m}:${sec.toString().padStart(2, '0')}`;
     };
 
-    // Update progress bar + time display via direct DOM manipulation (no React re-render)
+    // Bulletproof progress updater — clamps to [0, 100], never allows NaN/Infinity
     const updateProgressDOM = useCallback((currentTime) => {
         const dur = durationRef.current;
+        const time = isFinite(currentTime) ? currentTime : 0;
+        // Guard: if duration is 0, NaN, or Infinity → progress is 0%
+        let pct = (isFinite(dur) && dur > 0) ? (time / dur) * 100 : 0;
+        // Clamp to valid range
+        if (!isFinite(pct)) pct = 0;
+        pct = Math.max(0, Math.min(100, pct));
         if (progressBarRef.current) {
-            const pct = dur > 0 ? (currentTime / dur) * 100 : 0;
             progressBarRef.current.style.width = `${pct}%`;
         }
-        if (timeDisplayRef.current && dur > 0) {
-            timeDisplayRef.current.textContent = `${fmtTime(currentTime)} / ${fmtTime(dur)}`;
+        if (timeDisplayRef.current) {
+            if (isFinite(dur) && dur > 0) {
+                timeDisplayRef.current.textContent = `${fmtTime(time)} / ${fmtTime(dur)}`;
+            } else {
+                timeDisplayRef.current.textContent = '--:--';
+            }
         }
     }, []);
 
-    // rAF tick — writes directly to DOM, never calls setState
+    // rAF tick — writes to DOM only, never calls setState
     const tick = useCallback(() => {
         if (audioRef.current && !audioRef.current.paused) {
             updateProgressDOM(audioRef.current.currentTime);
@@ -431,14 +449,61 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
         }
     }, [updateProgressDOM]);
 
-    // Full cleanup on unmount: stop audio, cancel rAF, close AudioContext
+    // ── Imperative audio event listeners (Bug 1 + Bug 3 fix) ─────────────
+    // Using addEventListener instead of React's onLoadedMetadata/onEnded
+    // guarantees we catch metadata even on cached/instant-load blob audio,
+    // and avoids React's synthetic event overhead during playback.
     useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const onDurationReady = () => {
+            const dur = audio.duration;
+            if (isFinite(dur) && dur > 0) {
+                durationRef.current = dur;
+                if (mountedRef.current) setAudioDuration(dur);
+                // Reset progress bar to 0% now that we have a valid duration
+                updateProgressDOM(0);
+            }
+        };
+
+        const onEnded = () => {
+            if (animRef.current) cancelAnimationFrame(animRef.current);
+            updateProgressDOM(0);
+            if (mountedRef.current) setPlaying(false);
+        };
+
+        // Listen for both loadedmetadata AND durationchange:
+        // - loadedmetadata: standard path, fires when metadata first loads
+        // - durationchange: fallback for Safari/WebKit where duration can
+        //   initially be Infinity on blob/data URLs, then corrects later
+        audio.addEventListener('loadedmetadata', onDurationReady);
+        audio.addEventListener('durationchange', onDurationReady);
+        audio.addEventListener('ended', onEnded);
+
+        // If metadata is already loaded (cached audio, fast blob), read it now.
+        // readyState >= 1 (HAVE_METADATA) means duration is available.
+        if (audio.readyState >= 1 && isFinite(audio.duration) && audio.duration > 0) {
+            onDurationReady();
+        }
+
         return () => {
+            audio.removeEventListener('loadedmetadata', onDurationReady);
+            audio.removeEventListener('durationchange', onDurationReady);
+            audio.removeEventListener('ended', onEnded);
+        };
+    }, [objectUrl, updateProgressDOM]);
+
+    // ── Full cleanup on unmount ──────────────────────────────────────────
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
             if (animRef.current) cancelAnimationFrame(animRef.current);
             if (audioRef.current) {
                 audioRef.current.pause();
                 audioRef.current.removeAttribute('src');
-                audioRef.current.load(); // release resource
+                audioRef.current.load();
             }
             if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
                 audioCtxRef.current.close().catch(() => {});
@@ -446,23 +511,10 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
         };
     }, []);
 
-    const handleLoadedMetadata = useCallback(() => {
-        const dur = audioRef.current?.duration || 0;
-        setAudioDuration(dur);
-        durationRef.current = dur;
-    }, []);
-
-    const handleEnded = useCallback(() => {
-        cancelAnimationFrame(animRef.current);
-        setPlaying(false);
-        updateProgressDOM(0);
-    }, [updateProgressDOM]);
-
+    // ── Playback controls ───────────────────────────────────────────────
     const togglePlay = () => {
         if (!audioRef.current) return;
-        // Set up audio context on first play (after user interaction)
         if (!sourceConnected.current) setupAudioContext();
-        // Resume AudioContext if suspended (browser autoplay policy)
         if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume();
         if (playing) {
             audioRef.current.pause();
@@ -477,13 +529,15 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
     };
 
     const seek = (e) => {
-        if (!audioRef.current || !durationRef.current) return;
+        const dur = durationRef.current;
+        if (!audioRef.current || !isFinite(dur) || dur <= 0) return;
         const rect = e.currentTarget.getBoundingClientRect();
         const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        audioRef.current.currentTime = pct * durationRef.current;
+        audioRef.current.currentTime = pct * dur;
         updateProgressDOM(audioRef.current.currentTime);
     };
 
+    // ── Rename logic ────────────────────────────────────────────────────
     const commitRename = () => {
         const trimmed = editName.trim();
         if (trimmed && trimmed !== voiceEntry.name) {
@@ -494,14 +548,12 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
         setEditing(false);
     };
 
-    // Sync editName when voiceEntry.name changes externally
     useEffect(() => { setEditName(voiceEntry.name); }, [voiceEntry.name]);
-
-    // Focus input when editing starts
     useEffect(() => {
         if (editing && nameInputRef.current) nameInputRef.current.focus();
     }, [editing]);
 
+    // ── Render ───────────────────────────────────────────────────────────
     return (
         <div style={{
             display: 'flex', flexDirection: 'column', gap: '4px', padding: '10px 12px', borderRadius: '10px',
@@ -541,7 +593,6 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
                         {voiceEntry.name}
                     </span>
                 )}
-                {/* Rename icon */}
                 {!editing && (
                     <button onClick={() => setEditing(true)} title="Rename voice note"
                         style={{
@@ -569,9 +620,8 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
             </div>
             {/* Player controls row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <audio ref={audioRef} src={objectUrl} preload="auto"
-                    onLoadedMetadata={handleLoadedMetadata}
-                    onEnded={handleEnded} style={{ display: 'none' }} />
+                {/* Audio element — no React event handlers, all imperative */}
+                <audio ref={audioRef} src={objectUrl} preload="auto" style={{ display: 'none' }} />
                 {/* Play/Pause */}
                 <button onClick={togglePlay} style={{
                     width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
@@ -586,7 +636,7 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="#00d4ff"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                     )}
                 </button>
-                {/* Progress bar — updated directly via ref, no re-renders */}
+                {/* Progress bar — direct DOM ref, zero re-renders during playback */}
                 <div onClick={seek} style={{
                     flex: 1, height: '5px', background: 'rgba(0,212,255,0.08)', borderRadius: '3px',
                     cursor: 'pointer', position: 'relative', minWidth: 0,
@@ -598,9 +648,9 @@ function VoicePlayer({ voiceEntry, index, onRemove, onRename }) {
                         willChange: 'width',
                     }} />
                 </div>
-                {/* Time display — updated directly via ref, no re-renders */}
+                {/* Time display — direct DOM ref, zero re-renders during playback */}
                 <span ref={timeDisplayRef} style={{ fontFamily: fontMono, fontSize: '9px', color: 'rgba(0,212,255,0.4)', flexShrink: 0 }}>
-                    {audioDuration ? `0:00 / ${fmtTime(audioDuration)}` : '--:--'}
+                    {audioDuration > 0 ? `0:00 / ${fmtTime(audioDuration)}` : '--:--'}
                 </span>
                 {/* Volume */}
                 <input type="range" min="0" max="2" step="0.1" value={volume}
