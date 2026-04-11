@@ -11,6 +11,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useBrainStore from '../../store/brainStore';
 import { useResponsive } from '../../hooks/useResponsive';
+import { useAuth } from '../../contexts/AuthContext';
 
 const font = "'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
 const fontMono = "'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
@@ -58,30 +59,30 @@ const STAGES = [
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PERSISTENCE
+// PERSISTENCE — user-scoped via Firebase UID
 // ═══════════════════════════════════════════════════════════════════════════
-const STORAGE_KEY = 'alexander_v2';
-
-function loadData() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (_) {}
-  return {
-    tasks: [
-      { id: 1, title: 'Cold shower — 2 minutes, no warm-up', cat: 'body', resistance: 4, completions: 8, streak: 0, lastDone: null, created: Date.now() - 86400000 * 20 },
-      { id: 2, title: 'Gym when every fiber says no', cat: 'body', resistance: 3, completions: 14, streak: 3, lastDone: Date.now() - 86400000, created: Date.now() - 86400000 * 30 },
-      { id: 3, title: 'Send the email sitting in drafts', cat: 'career', resistance: 3, completions: 0, streak: 0, lastDone: null, created: Date.now() - 86400000 * 6 },
-      { id: 4, title: 'Call Dad about the argument', cat: 'fear', resistance: 5, completions: 0, streak: 0, lastDone: null, created: Date.now() - 86400000 * 11 },
-      { id: 5, title: 'Wake up at 5am — no snooze', cat: 'mind', resistance: 4, completions: 5, streak: 1, lastDone: Date.now() - 86400000 * 2, created: Date.now() - 86400000 * 15 },
-    ],
-    log: [], // { id, taskId, taskTitle, resistance, points, ts }
-    totalPoints: 847,
-  };
+function getStorageKey(userId) {
+  return userId ? `alexander_v2_${userId}` : 'alexander_v2';
 }
 
-function persist(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (_) {}
+const EMPTY_STATE = {
+  tasks: [],
+  log: [],
+  totalPoints: 0,
+};
+
+function loadData(userId) {
+  try {
+    const raw = localStorage.getItem(getStorageKey(userId));
+    if (raw) return JSON.parse(raw);
+  } catch (_) {}
+  // Clean legacy key if it exists (one-time migration per user)
+  try { localStorage.removeItem('alexander_v2'); } catch (_) {}
+  return { ...EMPTY_STATE, tasks: [], log: [] };
+}
+
+function persist(data, userId) {
+  try { localStorage.setItem(getStorageKey(userId), JSON.stringify(data)); } catch (_) {}
 }
 
 
@@ -1064,7 +1065,9 @@ function JourneyPanel({ score }) {
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════
 export default function AlexanderPage({ isOpen, onClose }) {
-  const [data, setData] = useState(() => loadData());
+  const { user } = useAuth();
+  const userId = user?.uid || null;
+  const [data, setData] = useState(() => loadData(userId));
   const [tab, setTab] = useState('home'); // home | forge | log | journey
   const [forgeOpen, setForgeOpen] = useState(false);
   const [pulseSignal, setPulseSignal] = useState(0);
@@ -1072,7 +1075,10 @@ export default function AlexanderPage({ isOpen, onClose }) {
   const { isMobile, isTablet } = useResponsive();
   const addToast = useBrainStore(s => s.addToast);
 
-  useEffect(() => { persist(data); }, [data]);
+  // Re-load data when user changes (login/logout)
+  useEffect(() => { setData(loadData(userId)); }, [userId]);
+
+  useEffect(() => { persist(data, userId); }, [data, userId]);
 
   const score = data.totalPoints;
   const stage = STAGES.find(s => score >= s.min && score < s.max) || STAGES[STAGES.length - 1];
