@@ -284,7 +284,7 @@ export default function TopBar() {
                                 zIndex: 2,
                             }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ fontSize: '13px' }}>📚</span>
+                                    <span style={{ fontSize: '13px', color: '#00d4ff', fontFamily: "'SF Mono', monospace" }}>▦</span>
                                     <span style={{
                                         fontFamily: sfDisplay,
                                         fontSize: '12px',
@@ -312,7 +312,7 @@ export default function TopBar() {
                                     padding: '40px 20px',
                                     textAlign: 'center',
                                 }}>
-                                    <div style={{ fontSize: '28px', marginBottom: '10px', opacity: 0.4 }}>🧠</div>
+                                    <div style={{ fontSize: '28px', marginBottom: '10px', opacity: 0.4, fontFamily: "'SF Mono', monospace", color: '#4a6080' }}>◉</div>
                                     <div style={{
                                         fontFamily: sfText,
                                         fontSize: '12px',

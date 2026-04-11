@@ -145,7 +145,7 @@ export default function VaultImportModal({ isOpen, onClose }) {
                                 margin: 0,
                                 letterSpacing: '0.5px',
                             }}>
-                                📥 Import to Brain
+                                ▽ Import to Brain
                             </h2>
                             <p style={{
                                 fontFamily: fontMono,
@@ -192,7 +192,7 @@ export default function VaultImportModal({ isOpen, onClose }) {
                                 textAlign: 'center',
                             }}>
                                 <div style={{ fontSize: '40px', marginBottom: '12px' }}>
-                                    {results.imported > 0 ? '✦' : '📭'}
+                                    {results.imported > 0 ? '✦' : '□'}
                                 </div>
                                 <div style={{
                                     fontFamily: font,
@@ -330,7 +330,7 @@ export default function VaultImportModal({ isOpen, onClose }) {
                                         border: '1px solid rgba(255, 255, 255, 0.04)',
                                     }}>
                                         <span style={{ fontSize: '14px' }}>
-                                            {node.fromFeynman ? '✦' : '📄'}
+                                            {node.fromFeynman ? '✦' : '▤'}
                                         </span>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{
@@ -444,7 +444,7 @@ export default function VaultImportModal({ isOpen, onClose }) {
                                 animate={{ y: dragOver ? -5 : 0 }}
                                 style={{ fontSize: '36px', marginBottom: '12px' }}
                             >
-                                {dragOver ? '📥' : '📂'}
+                                {dragOver ? '▽' : '▣'}
                             </motion.div>
                             <div style={{
                                 fontFamily: font,
@@ -476,7 +476,7 @@ export default function VaultImportModal({ isOpen, onClose }) {
                             background: 'rgba(124, 58, 237, 0.04)',
                             border: '1px solid rgba(124, 58, 237, 0.1)',
                         }}>
-                            <span style={{ fontSize: '14px' }}>💡</span>
+                            <span style={{ fontSize: '14px' }}>○</span>
                             <div style={{
                                 fontFamily: fontMono,
                                 fontSize: '11px',

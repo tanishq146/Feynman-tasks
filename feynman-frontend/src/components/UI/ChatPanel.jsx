@@ -575,9 +575,9 @@ export default function ChatPanel({ isOpen = false, onClose }) {
                                                 display: 'flex', alignItems: 'center', gap: '6px',
                                             }}>
                                                 {msg.isAnalysis ? (
-                                                    <>🔍 WHY CHAIN ANALYSIS</>
+                                                    <>◇ WHY CHAIN ANALYSIS</>
                                                 ) : msg.isWhyChain ? (
-                                                    <>🔗 DEPTH {msg.whyDepth}/{MAX_DEPTH}</>
+                                                    <>◇ DEPTH {msg.whyDepth}/{MAX_DEPTH}</>
                                                 ) : (
                                                     'FEYNMAN'
                                                 )}
@@ -682,7 +682,7 @@ export default function ChatPanel({ isOpen = false, onClose }) {
                                         fontFamily: sfText, fontSize: '10px',
                                         color: '#b794f6',
                                     }}>
-                                        🔗 Why Chain Active — Depth {whyChainDepth}/{MAX_DEPTH}
+                                        ◇ Why Chain Active — Depth {whyChainDepth}/{MAX_DEPTH}
                                     </span>
                                     <button
                                         onClick={() => {

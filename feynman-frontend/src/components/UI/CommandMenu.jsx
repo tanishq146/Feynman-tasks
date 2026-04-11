@@ -16,7 +16,7 @@ const fontMono = "'SF Pro Text', -apple-system, sans-serif";
 const menuItems = [
     {
         id: 'chat',
-        icon: '💬',
+        icon: '◎',
         label: 'Chat',
         description: 'Talk to Feynman',
         color: '#00d4ff',
@@ -25,7 +25,7 @@ const menuItems = [
     },
     {
         id: 'beliefs',
-        icon: '🧬',
+        icon: '◬',
         label: 'Beliefs',
         description: 'Belief Evolution',
         color: '#00d4ff',
@@ -34,7 +34,7 @@ const menuItems = [
     },
     {
         id: 'study',
-        icon: '📚',
+        icon: '▦',
         label: 'Study',
         description: 'Study Mode',
         color: '#7c3aed',
@@ -43,7 +43,7 @@ const menuItems = [
     },
     {
         id: 'notes',
-        icon: '📓',
+        icon: '▤',
         label: 'Notes',
         description: 'Full Workspace',
         color: '#f59e0b',
@@ -52,7 +52,7 @@ const menuItems = [
     },
     {
         id: 'mirror',
-        icon: '🪞',
+        icon: '◈',
         label: 'Mind Mirror',
         description: 'Journal your psyche',
         color: '#a78bfa',
@@ -60,8 +60,36 @@ const menuItems = [
         colorBorder: 'rgba(167, 139, 250, 0.15)',
     },
     {
+        id: 'mindscape',
+        icon: '◉',
+        label: 'Mindscape',
+        description: 'Living mind graph',
+        color: '#9B7FE8',
+        colorBg: 'rgba(155, 127, 232, 0.08)',
+        colorBorder: 'rgba(155, 127, 232, 0.15)',
+    },
+    {
+        id: 'delphi',
+        icon: '◇',
+        label: 'Delphi',
+        description: 'Simulate your people',
+        color: '#06B6D4',
+        colorBg: 'rgba(6, 182, 212, 0.08)',
+        colorBorder: 'rgba(6, 182, 212, 0.15)',
+    },
+    {
+        id: 'alexander',
+        icon: '◆',
+        label: 'Alexander',
+        description: 'aMCC Resistance Training',
+        color: '#E8A838',
+        colorBg: 'rgba(232, 168, 56, 0.08)',
+        colorBorder: 'rgba(232, 168, 56, 0.15)',
+    },
+
+    {
         id: 'vault',
-        icon: '📦',
+        icon: '▣',
         label: 'Vault',
         description: 'Export as Markdown',
         color: '#00ff88',
@@ -70,7 +98,7 @@ const menuItems = [
     },
     {
         id: 'import',
-        icon: '📥',
+        icon: '▽',
         label: 'Import',
         description: 'Import Markdown / Obsidian',
         color: '#a78bfa',
@@ -125,17 +153,17 @@ export default function CommandMenu({ onSelect, activePanel }) {
         if (vaultExporting) return;
         setVaultExporting(true);
         try {
-            console.log('📦 Vault: Fetching export data...');
+            console.log('[Vault] Fetching export data...');
             const data = await exportVault();
             if (!data.nodes || data.nodes.length === 0) {
                 addToast({ type: 'danger', icon: '✕', message: 'No knowledge nodes to export', duration: 3000 });
                 setVaultExporting(false);
                 return;
             }
-            console.log(`📦 Vault: Got ${data.nodes.length} nodes, ${data.edges?.length || 0} edges. Generating ZIP...`);
+            console.log(`[Vault] Got ${data.nodes.length} nodes, ${data.edges?.length || 0} edges. Generating ZIP...`);
             const result = await generateVaultZip(data);
             setVaultDone(true);
-            console.log(`📦 Vault: Export complete! ${result.nodeCount} nodes exported.`);
+            console.log(`[Vault] Export complete. ${result.nodeCount} nodes exported.`);
             // Save sync state
             localStorage.setItem('feynman_vault_last_sync', JSON.stringify({
                 timestamp: Date.now(),
@@ -144,7 +172,7 @@ export default function CommandMenu({ onSelect, activePanel }) {
             addToast({ type: 'success', icon: '✦', message: `Exported ${result.nodeCount} nodes as Markdown vault`, duration: 4000 });
             setTimeout(() => setVaultDone(false), 3000);
         } catch (err) {
-            console.error('📦 Vault export error:', err);
+            console.error('[Vault] Export error:', err);
             addToast({ type: 'danger', icon: '✕', message: 'Export failed — ' + (err?.message || 'Unknown error'), duration: 4000 });
         } finally {
             setVaultExporting(false);
@@ -177,7 +205,7 @@ export default function CommandMenu({ onSelect, activePanel }) {
                 position: 'fixed',
                 left: isMobile ? 'auto' : '20px',
                 right: isMobile ? '16px' : 'auto',
-                bottom: isMobile ? '80px' : '100px',
+                bottom: isMobile ? '80px' : '24px',
                 zIndex: 65,
             }}
         >
@@ -196,7 +224,7 @@ export default function CommandMenu({ onSelect, activePanel }) {
                             right: isMobile ? 0 : 'auto',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '6px',
+                            gap: '4px',
                             padding: isMobile ? '8px' : '10px',
                             borderRadius: '16px',
                             background: 'rgba(2, 8, 20, 0.95)',
@@ -205,6 +233,9 @@ export default function CommandMenu({ onSelect, activePanel }) {
                             border: '1px solid rgba(0, 212, 255, 0.1)',
                             boxShadow: '0 8px 40px rgba(0, 0, 0, 0.5), 0 0 60px rgba(0, 212, 255, 0.03)',
                             minWidth: isMobile ? '170px' : '180px',
+                            maxHeight: isMobile ? 'calc(100dvh - 160px)' : 'calc(100dvh - 180px)',
+                            overflowY: 'auto',
+                            overflowX: 'hidden',
                         }}
                     >
                         {/* Menu header */}
@@ -239,7 +270,7 @@ export default function CommandMenu({ onSelect, activePanel }) {
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: '12px',
-                                        padding: '10px 12px',
+                                        padding: '8px 12px',
                                         borderRadius: '10px',
                                         border: `1px solid ${isActive ? item.colorBorder : 'transparent'}`,
                                         background: isActive ? item.colorBg : 'transparent',

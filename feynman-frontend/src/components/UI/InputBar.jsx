@@ -6,13 +6,14 @@ import { useResponsive } from '../../hooks/useResponsive';
 
 // ─── Lobe options for the picker ────────────────────────────────────────────
 const LOBE_OPTIONS = [
-    { value: null, label: 'Auto-detect', icon: '🧠', color: '#00d4ff', description: 'AI picks the best lobe' },
-    { value: 'prefrontal_cortex', label: 'Frontal', icon: '🎯', color: '#7c5ce0', description: 'Goals · Planning · Decisions' },
-    { value: 'temporal_lobe', label: 'Temporal', icon: '🗣', color: '#e8922a', description: 'Language · Stories · Memory' },
-    { value: 'hippocampus', label: 'Parietal', icon: '📐', color: '#2abb7f', description: 'Spatial · Math · Logic' },
-    { value: 'occipital_lobe', label: 'Occipital', icon: '👁', color: '#e05580', description: 'Visual · Patterns · Images' },
-    { value: 'cerebellum', label: 'Cerebellum', icon: '⚡', color: '#20b8c8', description: 'Skills · Habits · Procedures' },
+    { value: null, label: 'Auto-detect', icon: '◉', color: '#00d4ff', description: 'AI picks the best lobe' },
+    { value: 'prefrontal_cortex', label: 'Frontal', icon: '◈', color: '#7c5ce0', description: 'Goals · Planning · Decisions' },
+    { value: 'temporal_lobe', label: 'Temporal', icon: '◇', color: '#e8922a', description: 'Language · Stories · Memory' },
+    { value: 'hippocampus', label: 'Parietal', icon: '△', color: '#2abb7f', description: 'Spatial · Math · Logic' },
+    { value: 'occipital_lobe', label: 'Occipital', icon: '○', color: '#e05580', description: 'Visual · Patterns · Images' },
+    { value: 'cerebellum', label: 'Cerebellum', icon: '□', color: '#20b8c8', description: 'Skills · Habits · Procedures' },
 ];
+
 
 export default function InputBar() {
     const [value, setValue] = useState('');

@@ -179,7 +179,7 @@ body,
    Desktop layout is completely untouched.
    ═══════════════════════════════════════════════════════════════ */
 
-/* Prevent tap-highlight on mobile */
+/* Prevent tap-highlight on touch devices */
 @media (max-width: 1024px) {
   * {
     -webkit-tap-highlight-color: transparent;
@@ -187,6 +187,25 @@ body,
   
   /* Slightly thinner scrollbars on touch */
   ::-webkit-scrollbar { width: 3px; }
+}
+
+/* ─── TABLET 769px–1024px ────────────────────────────────── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Reduce heavy blur effects for performance */
+  .glass {
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+  }
+
+  /* Reduce noise overlay — saves GPU */
+  #root::after {
+    opacity: 0.02;
+  }
+
+  /* Optimize canvas touch */
+  canvas {
+    touch-action: pan-x pan-y;
+  }
 }
 
 /* ─── MOBILE ≤768px ─────────────────────────────────────── */
@@ -233,5 +252,10 @@ body,
   /* Optimize 3D canvas touch handling */
   canvas {
     touch-action: pan-x pan-y;
+  }
+
+  /* Use dvh for full-viewport elements on mobile (handles iOS toolbar) */
+  html, body, #root {
+    height: 100dvh;
   }
 }

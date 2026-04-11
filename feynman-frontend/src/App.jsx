@@ -15,6 +15,10 @@ import LobeDiveTransition from './components/UI/LobeDiveTransition';
 import NotesPanel from './components/UI/NotesPanel';
 import NotesWorkspace from './components/UI/NotesWorkspace';
 import MindMirror from './components/UI/MindMirror';
+import MindscapePage from './components/mindscape/MindscapePage';
+import DelphiPage from './components/delphi/DelphiPage';
+import AlexanderPage from './components/alexander/AlexanderPage';
+
 import Toast from './components/UI/Toast';
 
 import AuthScreen from './components/UI/AuthScreen';
@@ -46,9 +50,13 @@ function FeynmanApp() {
   const [studyPrefilteredIds, setStudyPrefilteredIds] = useState(null);
   const [notesWorkspaceOpen, setNotesWorkspaceOpen] = useState(false);
   const [mindMirrorOpen, setMindMirrorOpen] = useState(false);
+  const [mindscapeOpen, setMindscapeOpen] = useState(false);
+  const [delphiOpen, setDelphiOpen] = useState(false);
+  const [alexanderOpen, setAlexanderOpen] = useState(false);
+
 
   // Track which panel is currently active for the menu indicator
-  const activePanel = chatOpen ? 'chat' : beliefPanelOpen ? 'beliefs' : studyModeOpen ? 'study' : notesWorkspaceOpen ? 'notes' : mindMirrorOpen ? 'mirror' : null;
+  const activePanel = chatOpen ? 'chat' : beliefPanelOpen ? 'beliefs' : studyModeOpen ? 'study' : notesWorkspaceOpen ? 'notes' : mindMirrorOpen ? 'mirror' : mindscapeOpen ? 'mindscape' : delphiOpen ? 'delphi' : alexanderOpen ? 'alexander' : null;
 
   const handleStudyFromWarning = useCallback((nodeIds) => {
     setStudyPrefilteredIds(nodeIds);
@@ -68,12 +76,18 @@ function FeynmanApp() {
       setStudyModeOpen(false);
       setNotesWorkspaceOpen(false);
       setMindMirrorOpen(false);
+      setMindscapeOpen(false);
+      setDelphiOpen(false);
+      setAlexanderOpen(false);
     } else if (id === 'beliefs') {
       setBeliefPanelOpen(prev => !prev);
       setChatOpen(false);
       setStudyModeOpen(false);
       setNotesWorkspaceOpen(false);
       setMindMirrorOpen(false);
+      setMindscapeOpen(false);
+      setDelphiOpen(false);
+      setAlexanderOpen(false);
     } else if (id === 'study') {
       setStudyPrefilteredIds(null);
       setStudyModeOpen(prev => !prev);
@@ -81,18 +95,54 @@ function FeynmanApp() {
       setBeliefPanelOpen(false);
       setNotesWorkspaceOpen(false);
       setMindMirrorOpen(false);
+      setMindscapeOpen(false);
+      setDelphiOpen(false);
+      setAlexanderOpen(false);
     } else if (id === 'notes') {
       setNotesWorkspaceOpen(prev => !prev);
       setChatOpen(false);
       setBeliefPanelOpen(false);
       setStudyModeOpen(false);
       setMindMirrorOpen(false);
+      setMindscapeOpen(false);
+      setDelphiOpen(false);
+      setAlexanderOpen(false);
     } else if (id === 'mirror') {
       setMindMirrorOpen(prev => !prev);
       setChatOpen(false);
       setBeliefPanelOpen(false);
       setStudyModeOpen(false);
       setNotesWorkspaceOpen(false);
+      setMindscapeOpen(false);
+      setDelphiOpen(false);
+      setAlexanderOpen(false);
+    } else if (id === 'mindscape') {
+      setMindscapeOpen(prev => !prev);
+      setChatOpen(false);
+      setBeliefPanelOpen(false);
+      setStudyModeOpen(false);
+      setNotesWorkspaceOpen(false);
+      setMindMirrorOpen(false);
+      setDelphiOpen(false);
+      setAlexanderOpen(false);
+    } else if (id === 'delphi') {
+      setDelphiOpen(prev => !prev);
+      setChatOpen(false);
+      setBeliefPanelOpen(false);
+      setStudyModeOpen(false);
+      setNotesWorkspaceOpen(false);
+      setMindMirrorOpen(false);
+      setMindscapeOpen(false);
+      setAlexanderOpen(false);
+    } else if (id === 'alexander') {
+      setAlexanderOpen(prev => !prev);
+      setChatOpen(false);
+      setBeliefPanelOpen(false);
+      setStudyModeOpen(false);
+      setNotesWorkspaceOpen(false);
+      setMindMirrorOpen(false);
+      setMindscapeOpen(false);
+      setDelphiOpen(false);
     }
   }, []);
 
@@ -183,6 +233,18 @@ function FeynmanApp() {
 
       {/* Mind Mirror — full screen journaling */}
       <MindMirror isOpen={mindMirrorOpen} onClose={() => setMindMirrorOpen(false)} />
+
+      {/* Mindscape — Living Graph + Brain Simulation */}
+      <MindscapePage isOpen={mindscapeOpen} onClose={() => setMindscapeOpen(false)} />
+
+      {/* Alexander — aMCC Resistance Training */}
+      <AlexanderPage isOpen={alexanderOpen} onClose={() => setAlexanderOpen(false)} />
+
+      {/* Delphi — Custom Agent Simulation */}
+      <DelphiPage isOpen={delphiOpen} onClose={() => setDelphiOpen(false)} />
+
+
+
 
 
 

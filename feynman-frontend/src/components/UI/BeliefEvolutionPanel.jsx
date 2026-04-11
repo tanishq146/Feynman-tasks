@@ -8,10 +8,10 @@ const sfDisplay = "'SF Pro Display', -apple-system, BlinkMacSystemFont, system-u
 const sfText = "'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
 
 const SHIFT_CONFIG = {
-    reinforcement: { icon: '🔄', color: '#4a9eba', label: 'Reinforced' },
-    refinement: { icon: '✨', color: '#b794f6', label: 'Refined' },
-    contradiction: { icon: '⚡', color: '#ff6b6b', label: 'Contradicted' },
-    evolution: { icon: '🦋', color: '#00d4ff', label: 'Evolved' },
+    reinforcement: { icon: '◎', color: '#4a9eba', label: 'Reinforced' },
+    refinement: { icon: '○', color: '#b794f6', label: 'Refined' },
+    contradiction: { icon: '◆', color: '#ff6b6b', label: 'Contradicted' },
+    evolution: { icon: '△', color: '#00d4ff', label: 'Evolved' },
 };
 
 export default function BeliefEvolutionPanel({ isOpen, onClose }) {
@@ -103,7 +103,7 @@ export default function BeliefEvolutionPanel({ isOpen, onClose }) {
                                         <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                                     </svg>
                                 </motion.button>
-                                <span style={{ fontSize: '16px' }}>🧬</span>
+                                <span style={{ fontSize: '16px', color: '#00d4ff', fontFamily: "'SF Mono', monospace" }}>◬</span>
                                 <span style={{
                                     fontFamily: sfDisplay, fontSize: '14px', fontWeight: 700,
                                     color: '#e8f4fd', letterSpacing: '1.5px', textTransform: 'uppercase',
@@ -178,7 +178,7 @@ export default function BeliefEvolutionPanel({ isOpen, onClose }) {
                             <div style={{
                                 padding: '40px 20px', textAlign: 'center',
                             }}>
-                                <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.5 }}>🧬</div>
+                                <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.5, fontFamily: "'SF Mono', monospace", color: '#4a6080' }}>◬</div>
                                 <div style={{
                                     fontFamily: sfText, fontSize: '13px',
                                     color: 'rgba(232, 244, 253, 0.5)', lineHeight: '1.6',

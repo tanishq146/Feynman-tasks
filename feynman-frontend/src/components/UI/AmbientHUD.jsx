@@ -8,8 +8,7 @@ const sfText = "'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, san
 
 /**
  * AmbientHUD — floating stats and info overlaid on the 3D scene.
- * Shows knowledge stats, cluster overview, health indicators,
- * and a minimap of the constellation.
+ * Shows knowledge stats, cluster overview, and health indicators.
  */
 export default function AmbientHUD() {
     const nodes = useBrainStore((s) => s.nodes);
@@ -241,7 +240,7 @@ export default function AmbientHUD() {
                         marginBottom: '8px',
                     }}
                 >
-                    Constellations
+                    Topics
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     {clusters.slice(0, 8).map((cluster) => (

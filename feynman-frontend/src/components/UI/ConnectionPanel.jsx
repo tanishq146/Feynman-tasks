@@ -6,7 +6,7 @@ import { useResponsive } from '../../hooks/useResponsive';
 const typeConfig = {
     supports: {
         label: 'Supports',
-        icon: '🤝',
+        icon: '◎',
         color: '#00ff88',
         bg: 'rgba(0, 255, 136, 0.08)',
         border: 'rgba(0, 255, 136, 0.2)',
@@ -22,7 +22,7 @@ const typeConfig = {
     },
     extends: {
         label: 'Extends',
-        icon: '🧬',
+        icon: '◬',
         color: '#00d4ff',
         bg: 'rgba(0, 212, 255, 0.08)',
         border: 'rgba(0, 212, 255, 0.2)',
@@ -30,7 +30,7 @@ const typeConfig = {
     },
     requires: {
         label: 'Requires',
-        icon: '🔗',
+        icon: '◇',
         color: '#7c3aed',
         bg: 'rgba(124, 58, 237, 0.08)',
         border: 'rgba(124, 58, 237, 0.2)',
@@ -38,7 +38,7 @@ const typeConfig = {
     },
     example_of: {
         label: 'Example Of',
-        icon: '💡',
+        icon: '○',
         color: '#ffaa00',
         bg: 'rgba(255, 170, 0, 0.08)',
         border: 'rgba(255, 170, 0, 0.2)',

@@ -21,7 +21,7 @@ const MODES = {
     conscious: {
         label: 'Conscious',
         description: 'Structured reflection',
-        icon: '☀️',
+        icon: '◎',
         accent: '#00d4ff',
         accentDim: 'rgba(0, 212, 255, 0.08)',
         accentBorder: 'rgba(0, 212, 255, 0.12)',
@@ -32,7 +32,7 @@ const MODES = {
     subconscious: {
         label: 'Subconscious',
         description: 'Free-flowing thought',
-        icon: '🌙',
+        icon: '◈',
         accent: '#8b5cf6',
         accentDim: 'rgba(139, 92, 246, 0.08)',
         accentBorder: 'rgba(139, 92, 246, 0.12)',
@@ -201,7 +201,7 @@ export default function MindMirror({ isOpen, onClose }) {
             setContent('');
             addToast({
                 type: 'success',
-                icon: '🪞',
+                icon: '◈',
                 message: `${modeConfig.label} thought captured (${saved.word_count} words)`,
                 duration: 3000,
             });
@@ -251,7 +251,7 @@ export default function MindMirror({ isOpen, onClose }) {
             }}>
                 {/* Title */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '18px' }}>🪞</span>
+                    <span style={{ fontSize: '18px', color: '#a78bfa', fontFamily: "'SF Mono', monospace" }}>◈</span>
                     <div>
                         <div style={{
                             fontFamily: font, fontSize: '15px', fontWeight: 700,
@@ -420,7 +420,7 @@ export default function MindMirror({ isOpen, onClose }) {
                                     opacity: submitting ? 0.6 : 1,
                                 }}
                             >
-                                {submitting ? 'Saving...' : '🪞 Capture'}
+                                {submitting ? 'Saving...' : '◈ Capture'}
                             </button>
                         </div>
                     </div>
@@ -471,7 +471,7 @@ export default function MindMirror({ isOpen, onClose }) {
                             textAlign: 'center', padding: '60px 20px',
                             color: 'rgba(232, 244, 253, 0.15)',
                         }}>
-                            <div style={{ fontSize: '28px', marginBottom: '12px', opacity: 0.4 }}>🪞</div>
+                            <div style={{ fontSize: '28px', marginBottom: '12px', opacity: 0.4, fontFamily: "'SF Mono', monospace", color: '#4a6080' }}>◈</div>
                             <div style={{
                                 fontFamily: font, fontSize: '14px', fontWeight: 500,
                                 color: 'rgba(232, 244, 253, 0.25)', marginBottom: '6px',

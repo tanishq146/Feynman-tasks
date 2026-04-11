@@ -32,7 +32,7 @@ export function useSocket() {
 
                 switch (eventName) {
                     case 'connected':
-                        console.log('🧠', data.message);
+                        console.log('[Brain]', data.message);
                         break;
 
                     case 'node.created': {
@@ -63,7 +63,7 @@ export function useSocket() {
                         addEdge(data);
                         addToast({
                             type: 'connection',
-                            icon: '🔗',
+                            icon: '◇',
                             message: `Connected: ${data.source_title} → ${data.target_title}`,
                             duration: 4000,
                         });

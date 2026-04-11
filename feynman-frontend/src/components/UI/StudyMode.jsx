@@ -107,7 +107,7 @@ function StudySetup({ nodes, fadingNodes, onStart, onClose }) {
             exit={{ opacity: 0, y: -20 }}
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: '40px 20px' }}
         >
-            <span style={{ fontSize: '40px', marginBottom: '16px' }}>📚</span>
+            <span style={{ fontSize: '40px', marginBottom: '16px', fontFamily: "'SF Mono', monospace", color: '#4a6080' }}>▦</span>
             <h2 style={{ fontFamily: font, fontSize: '28px', fontWeight: 700, color: '#e8f4fd', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
                 Study Mode
             </h2>
@@ -143,7 +143,7 @@ function StudySetup({ nodes, fadingNodes, onStart, onClose }) {
                         transition: 'all 0.2s',
                     }}
                 >
-                    🔴 Fading only ({fadingNodes.length})
+                    ◆ Fading only ({fadingNodes.length})
                 </button>
             </div>
 
@@ -231,7 +231,7 @@ function FlashCard({ question, index, total, streak, onSubmit }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     {streak > 0 && (
                         <span style={{ fontFamily: fontMono, fontSize: '12px', color: '#ffaa00' }}>
-                            🔥 {streak} day streak
+                            ▲ {streak} day streak
                         </span>
                     )}
                     <DifficultyBadge difficulty={question.difficulty} />
@@ -266,7 +266,7 @@ function FlashCard({ question, index, total, streak, onSubmit }) {
                         animate={{ opacity: 1, y: 0 }}
                         style={{ fontFamily: fontMono, fontSize: '13px', color: '#7c3aed', fontStyle: 'italic' }}
                     >
-                        💡 {question.hint}
+                        ○ {question.hint}
                     </motion.p>
                 ) : (
                     <button
@@ -394,7 +394,7 @@ function GradeResult({ result, onNext, isLast }) {
                 {/* Feynman explains */}
                 <div style={{ ...glassCard, padding: '18px 20px', background: 'rgba(0,212,255,0.03)', border: '1px solid rgba(0,212,255,0.08)' }}>
                     <p style={{ fontFamily: fontMono, fontSize: '10px', color: '#00d4ff', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '8px' }}>
-                        💡 Feynman explains
+                        ○ Feynman explains
                     </p>
                     <p style={{ fontFamily: fontMono, fontSize: '13px', color: '#c8e0f0', lineHeight: 1.6, fontStyle: 'italic' }}>
                         "{result.feynman_explains}"
@@ -404,7 +404,7 @@ function GradeResult({ result, onNext, isLast }) {
                 {/* Memory tip */}
                 <div style={{ ...glassCard, padding: '18px 20px', background: 'rgba(124,58,237,0.03)', border: '1px solid rgba(124,58,237,0.08)' }}>
                     <p style={{ fontFamily: fontMono, fontSize: '10px', color: '#7c3aed', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '8px' }}>
-                        🧠 Memory tip
+                        ◉ Memory tip
                     </p>
                     <p style={{ fontFamily: fontMono, fontSize: '13px', color: '#d0c8f0', lineHeight: 1.6 }}>
                         "{result.memory_tip}"
@@ -468,7 +468,7 @@ function SessionComplete({ results, streak, feynmanSummary, onStudyAgain, onClos
                     transition={{ delay: 0.3 }}
                     style={{ fontFamily: fontMono, fontSize: '16px', color: '#ffaa00', marginBottom: '4px' }}
                 >
-                    🔥 {streak} day streak!
+                    ▲ {streak} day streak!
                 </motion.p>
             )}
 
