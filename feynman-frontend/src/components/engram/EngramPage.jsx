@@ -19,6 +19,8 @@ import { useResponsive } from '../../hooks/useResponsive';
 import ThoughtGraph from './ThoughtGraph';
 import IngestPanel from './IngestPanel';
 import ImportPanel from './ImportPanel';
+import CompressPanel from './CompressPanel';
+import QuickCapture from './QuickCapture';
 import ThoughtSidebar from './ThoughtSidebar';
 import InsightLayer from './InsightLayer';
 
@@ -52,6 +54,8 @@ export default function EngramPage({ isOpen, onClose }) {
     const [loading, setLoading] = useState(true);
     const [ingestOpen, setIngestOpen] = useState(false);
     const [importOpen, setImportOpen] = useState(false);
+    const [compressOpen, setCompressOpen] = useState(false);
+    const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [selectedThoughtId, setSelectedThoughtId] = useState(null);
     const [insightOpen, setInsightOpen] = useState(false);
@@ -163,7 +167,9 @@ export default function EngramPage({ isOpen, onClose }) {
         if (!isOpen) return;
         const handle = (e) => {
             if (e.key === 'Escape') {
-                if (ingestOpen) setIngestOpen(false);
+                if (compressOpen) setCompressOpen(false);
+                else if (quickCaptureOpen) setQuickCaptureOpen(false);
+                else if (ingestOpen) setIngestOpen(false);
                 else if (insightOpen) setInsightOpen(false);
                 else if (selectedThoughtId) setSelectedThoughtId(null);
                 else onClose?.();
@@ -171,7 +177,7 @@ export default function EngramPage({ isOpen, onClose }) {
         };
         window.addEventListener('keydown', handle);
         return () => window.removeEventListener('keydown', handle);
-    }, [isOpen, ingestOpen, insightOpen, selectedThoughtId, onClose]);
+    }, [isOpen, compressOpen, quickCaptureOpen, ingestOpen, insightOpen, selectedThoughtId, onClose]);
 
     if (!isOpen) return null;
 
@@ -329,24 +335,66 @@ export default function EngramPage({ isOpen, onClose }) {
                     </motion.button>
                 )}
 
+                {/* Compress button */}
+                {thoughts.length > 0 && (
+                    <motion.button
+                        onClick={() => setCompressOpen(true)}
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        style={{
+                            padding: '0 14px', height: '100%',
+                            background: 'none', border: 'none',
+                            borderLeft: `1px solid ${C.border}`,
+                            color: '#A78BFA',
+                            fontFamily: fontMono, fontSize: '11px', fontWeight: 600,
+                            cursor: 'pointer', transition: 'all 0.15s',
+                            display: 'flex', alignItems: 'center', gap: '5px',
+                            letterSpacing: '0.3px', flexShrink: 0,
+                        }}
+                    >
+                        <span style={{ fontSize: '12px', fontFamily: "'SF Mono', monospace" }}>⬢</span>
+                        {isMobile ? '' : 'Compress'}
+                    </motion.button>
+                )}
+
+                {/* Quick Capture button */}
+                <motion.button
+                    onClick={() => setQuickCaptureOpen(true)}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    style={{
+                        padding: '0 14px', height: '100%',
+                        background: 'none', border: 'none',
+                        borderLeft: `1px solid ${C.border}`,
+                        color: C.cyan,
+                        fontFamily: fontMono, fontSize: '11px', fontWeight: 600,
+                        cursor: 'pointer', transition: 'all 0.15s',
+                        display: 'flex', alignItems: 'center', gap: '5px',
+                        letterSpacing: '0.3px', flexShrink: 0,
+                    }}
+                >
+                    <span style={{ fontSize: '12px', fontFamily: "'SF Mono', monospace" }}>⇗</span>
+                    {isMobile ? 'Grab' : 'Quick Capture'}
+                </motion.button>
+
                 {/* Import button */}
                 <motion.button
                     onClick={() => setImportOpen(true)}
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
                     style={{
-                        padding: '0 16px', height: '100%',
+                        padding: '0 14px', height: '100%',
                         background: 'none', border: 'none',
                         borderLeft: `1px solid ${C.border}`,
-                        color: C.cyan,
+                        color: C.textMid,
                         fontFamily: fontMono, fontSize: '11px', fontWeight: 600,
                         cursor: 'pointer', transition: 'all 0.15s',
-                        display: 'flex', alignItems: 'center', gap: '6px',
+                        display: 'flex', alignItems: 'center', gap: '5px',
                         letterSpacing: '0.3px', flexShrink: 0,
                     }}
                 >
-                    <span style={{ fontSize: '13px' }}>↑</span>
-                    {isMobile ? 'Import' : 'Import Chats'}
+                    <span style={{ fontSize: '12px' }}>↑</span>
+                    {isMobile ? 'JSON' : 'Import JSON'}
                 </motion.button>
 
                 {/* Ingest button */}
@@ -355,18 +403,18 @@ export default function EngramPage({ isOpen, onClose }) {
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
                     style={{
-                        padding: '0 18px', height: '100%',
+                        padding: '0 16px', height: '100%',
                         background: 'none', border: 'none',
                         borderLeft: `1px solid ${C.border}`,
                         color: C.accent,
                         fontFamily: fontMono, fontSize: '11px', fontWeight: 600,
                         cursor: 'pointer', transition: 'all 0.15s',
-                        display: 'flex', alignItems: 'center', gap: '6px',
+                        display: 'flex', alignItems: 'center', gap: '5px',
                         letterSpacing: '0.3px', flexShrink: 0,
                     }}
                 >
-                    <span style={{ fontSize: '14px' }}>+</span>
-                    {isMobile ? 'Paste' : 'Paste Conversation'}
+                    <span style={{ fontSize: '13px' }}>+</span>
+                    {isMobile ? 'Paste' : 'Paste'}
                 </motion.button>
             </div>
 
@@ -436,7 +484,7 @@ export default function EngramPage({ isOpen, onClose }) {
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
                                     <motion.button
-                                        onClick={() => setImportOpen(true)}
+                                        onClick={() => setQuickCaptureOpen(true)}
                                         whileHover={{ scale: 1.04 }}
                                         whileTap={{ scale: 0.96 }}
                                         style={{
@@ -451,25 +499,43 @@ export default function EngramPage({ isOpen, onClose }) {
                                             boxShadow: '0 4px 24px rgba(0, 229, 160, 0.25)',
                                         }}
                                     >
-                                        ↑ Import Your Chat History
+                                        ⇗ Quick Capture from AI Chat
                                     </motion.button>
 
-                                    <motion.button
-                                        onClick={() => setIngestOpen(true)}
-                                        whileHover={{ scale: 1.03 }}
-                                        whileTap={{ scale: 0.97 }}
-                                        style={{
-                                            padding: '8px 20px',
-                                            borderRadius: '10px',
-                                            border: `1px solid ${C.border}`,
-                                            background: 'none',
-                                            color: C.textMid,
-                                            fontFamily: fontMono, fontSize: '11px', fontWeight: 600,
-                                            cursor: 'pointer',
-                                        }}
-                                    >
-                                        or paste a single conversation
-                                    </motion.button>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <motion.button
+                                            onClick={() => setImportOpen(true)}
+                                            whileHover={{ scale: 1.03 }}
+                                            whileTap={{ scale: 0.97 }}
+                                            style={{
+                                                padding: '8px 16px',
+                                                borderRadius: '10px',
+                                                border: `1px solid ${C.border}`,
+                                                background: 'none',
+                                                color: C.textMid,
+                                                fontFamily: fontMono, fontSize: '11px', fontWeight: 600,
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            ↑ Import JSON
+                                        </motion.button>
+                                        <motion.button
+                                            onClick={() => setIngestOpen(true)}
+                                            whileHover={{ scale: 1.03 }}
+                                            whileTap={{ scale: 0.97 }}
+                                            style={{
+                                                padding: '8px 16px',
+                                                borderRadius: '10px',
+                                                border: `1px solid ${C.border}`,
+                                                background: 'none',
+                                                color: C.textMid,
+                                                fontFamily: fontMono, fontSize: '11px', fontWeight: 600,
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            + Paste text
+                                        </motion.button>
+                                    </div>
                                 </div>
 
                                 <div style={{
@@ -581,6 +647,23 @@ export default function EngramPage({ isOpen, onClose }) {
                     setImportOpen(false);
                     fetchGraph();
                 }}
+            />
+
+            {/* Quick Capture Modal */}
+            <QuickCapture
+                isOpen={quickCaptureOpen}
+                onClose={() => setQuickCaptureOpen(false)}
+                onCapture={(data) => {
+                    setQuickCaptureOpen(false);
+                    handleIngest(data);
+                }}
+            />
+
+            {/* Knowledge Compression Modal */}
+            <CompressPanel
+                isOpen={compressOpen}
+                onClose={() => setCompressOpen(false)}
+                thoughtCount={thoughts.length}
             />
         </motion.div>
     );

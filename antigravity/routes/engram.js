@@ -16,6 +16,7 @@ import { supabase } from '../lib/supabase.js';
 import { extractThoughts, findMatchingThought, detectThoughtLinks } from '../services/engram/extractor.js';
 import { analyzeThinkingGraph, detectContradictions, detectGravityWells, analyzeVelocity } from '../services/engram/analyzer.js';
 import { parseExportFile } from '../services/engram/importer.js';
+import { compressConversation, compressAllThoughts } from '../services/engram/compressor.js';
 import multer from 'multer';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB max
@@ -841,6 +842,84 @@ router.post('/import/ingest', async (req, res, next) => {
             merged_thoughts: totalMerged,
             results,
         });
+    } catch (err) {
+        next(err);
+    }
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// POST /api/engram/compress/conversation
+// Compress a single conversation into a token-efficient knowledge packet.
+// Body: { content, source_ai }
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.post('/compress/conversation', async (req, res, next) => {
+    try {
+        const { content, source_ai } = req.body;
+
+        if (!content || typeof content !== 'string' || content.trim().length < 20) {
+            return res.status(400).json({ error: 'Conversation content is required (min 20 chars)' });
+        }
+
+        console.log(`📦 Engram: Compressing conversation (${content.length} chars, source: ${source_ai || 'unknown'})...`);
+        const result = await compressConversation(content.trim(), source_ai || 'unknown');
+
+        if (!result.success) {
+            return res.status(500).json({ error: result.error || 'Compression failed' });
+        }
+
+        console.log(`✅ Engram: Compressed → ${result.compressed?.length || 0} chars`);
+        res.json(result);
+    } catch (err) {
+        next(err);
+    }
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// POST /api/engram/compress/all
+// Compress the entire thinking graph into a master knowledge packet.
+// This is the "Export My Brain" feature — one pasteable block for any AI.
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.post('/compress/all', async (req, res, next) => {
+    try {
+        const userId = req.user.uid;
+
+        // Fetch all thoughts
+        const { data: thoughts, error: tError } = await supabase
+            .from('engram_thoughts')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+
+        if (tError) throw tError;
+
+        if (!thoughts || thoughts.length === 0) {
+            return res.status(400).json({ error: 'No thoughts to compress. Import some conversations first.' });
+        }
+
+        // Fetch all links
+        const thoughtIds = thoughts.map(t => t.id);
+        let links = [];
+        if (thoughtIds.length > 0) {
+            const { data: linkData } = await supabase
+                .from('engram_links')
+                .select('*')
+                .or(`source_id.in.(${thoughtIds.join(',')}),target_id.in.(${thoughtIds.join(',')})`);
+            links = linkData || [];
+        }
+
+        console.log(`📦 Engram: Compressing entire brain (${thoughts.length} thoughts, ${links.length} links)...`);
+        const result = await compressAllThoughts(thoughts, links);
+
+        if (!result.success) {
+            return res.status(500).json({ error: result.error || 'Master compression failed' });
+        }
+
+        console.log(`✅ Engram: Master packet → ${result.masterPacket?.length || 0} chars (ratio: ${result.stats?.ratio})`);
+        res.json(result);
     } catch (err) {
         next(err);
     }
