@@ -86,6 +86,15 @@ const menuItems = [
         colorBg: 'rgba(232, 168, 56, 0.08)',
         colorBorder: 'rgba(232, 168, 56, 0.15)',
     },
+    {
+        id: 'engram',
+        icon: '⬡',
+        label: 'Engram',
+        description: 'Living Thinking Graph',
+        color: '#00E5A0',
+        colorBg: 'rgba(0, 229, 160, 0.08)',
+        colorBorder: 'rgba(0, 229, 160, 0.15)',
+    },
 
     {
         id: 'vault',

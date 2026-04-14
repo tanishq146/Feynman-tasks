@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feynman Platform — Complete Feature Documentation</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg: #06080C;
+            --bg-surface: #0A0D14;
+            --bg-card: #0F1219;
+            --bg-elevated: #141820;
+            --accent-cyan: #00D4FF;
+            --accent-green: #00E5A0;
+            --accent-purple: #9B7FE8;
+            --accent-ember: #E8A838;
+            --accent-rose: #E85D4A;
+            --accent-blue: #5BA4F5;
+            --accent-teal: #06B6D4;
+            --text-primary: #E8F0F8;
+            --text-secondary: rgba(232, 240, 248, 0.65);
+            --text-dim: rgba(232, 240, 248, 0.35);
+            --text-ghost: rgba(232, 240, 248, 0.12);
+            --border: rgba(255, 255, 255, 0.06);
+            --border-accent: rgba(0, 212, 255, 0.12);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ─── Print Styles ──────────────────────────────────────── */
+        @media print {
+            body { background: #fff; color: #1a1a1a; }
+            .page { break-inside: avoid; page-break-inside: avoid; }
+            .section { break-inside: avoid; }
+            .no-print { display: none !important; }
+            :root {
+                --bg: #ffffff;
+                --bg-surface: #f8f9fa;
+                --bg-card: #f0f2f5;
+                --text-primary: #1a1a1a;
+                --text-secondary: #555;
+                --text-dim: #888;
+                --border: #e0e0e0;
+            }
+        }
+
+        /* ─── Layout ────────────────────────────────────────────── */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        /* ─── Cover Page ────────────────────────────────────────── */
+        .cover {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cover::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 600px 400px at 50% 45%, rgba(0, 212, 255, 0.06) 0%, transparent 70%),
+                radial-gradient(ellipse 400px 300px at 30% 60%, rgba(155, 127, 232, 0.04) 0%, transparent 60%),
+                radial-gradient(ellipse 500px 350px at 70% 40%, rgba(0, 229, 160, 0.03) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .cover-logo {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            color: var(--accent-cyan);
+            margin-bottom: 32px;
+            opacity: 0.6;
+        }
+
+        .cover-title {
+            font-size: 72px;
+            font-weight: 900;
+            letter-spacing: -3px;
+            line-height: 1;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+        }
+
+        .cover-subtitle {
+            font-size: 22px;
+            font-weight: 300;
+            color: var(--text-secondary);
+            max-width: 500px;
+            margin-bottom: 48px;
+            letter-spacing: -0.3px;
+        }
+
+        .cover-meta {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .cover-divider {
+            width: 60px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+            margin: 24px auto;
+        }
+
+        /* ─── Section Styles ────────────────────────────────────── */
+        .page {
+            padding: 80px 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .section-header {
+            margin-bottom: 48px;
+        }
+
+        .section-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            line-height: 1.15;
+            margin-bottom: 12px;
+        }
+
+        .section-desc {
+            font-size: 16px;
+            color: var(--text-secondary);
+            max-width: 650px;
+            line-height: 1.7;
+        }
+
+        /* ─── Feature Cards ─────────────────────────────────────── */
+        .feature-grid {
+            display: grid;
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .feature-card {
+            padding: 28px 32px;
+            border-radius: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            transition: border-color 0.2s;
+        }
+
+        .feature-card-title {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .feature-card-body {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .feature-card-body ul {
+            margin-top: 10px;
+            padding-left: 0;
+            list-style: none;
+        }
+
+        .feature-card-body ul li {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 6px;
+            font-size: 13.5px;
+        }
+
+        .feature-card-body ul li::before {
+            content: '›';
+            position: absolute;
+            left: 4px;
+            font-weight: 700;
+            opacity: 0.4;
+        }
+
+        .badge {
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 5px;
+        }
+
+        /* ─── Sub-sections ──────────────────────────────────────── */
+        .subsection {
+            margin-top: 40px;
+        }
+
+        .subsection-title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .subsection-body {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        /* ─── Tables ────────────────────────────────────────────── */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 13px;
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: 12px 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .data-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* ─── Info Blocks ───────────────────────────────────────── */
+        .info-block {
+            padding: 20px 24px;
+            border-radius: 12px;
+            margin-top: 20px;
+            border-left: 3px solid;
+        }
+
+        .info-block p {
+            font-size: 13.5px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .info-block.formula {
+            background: rgba(0, 212, 255, 0.04);
+            border-left-color: var(--accent-cyan);
+        }
+
+        .info-block.note {
+            background: rgba(155, 127, 232, 0.04);
+            border-left-color: var(--accent-purple);
+        }
+
+        .info-block.important {
+            background: rgba(232, 93, 74, 0.04);
+            border-left-color: var(--accent-rose);
+        }
+
+        .formula-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            margin: 8px 0;
+            letter-spacing: 0.5px;
+        }
+
+        /* ─── Horizontal Rule ───────────────────────────────────── */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border), transparent);
+            margin: 40px 0;
+        }
+
+        /* ─── Agent Grid ────────────────────────────────────────── */
+        .agent-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .agent-item {
+            padding: 12px 16px;
+            border-radius: 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            font-size: 12px;
+        }
+
+        .agent-item .agent-name {
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .agent-item .agent-emotion {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            opacity: 0.5;
+        }
+
+        /* ─── Stage Indicators ──────────────────────────────────── */
+        .stages-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .stage-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 18px;
+            border-radius: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+        }
+
+        .stage-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .stage-name {
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+            width: 120px;
+        }
+
+        .stage-range {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-dim);
+            width: 80px;
+            flex-shrink: 0;
+        }
+
+        .stage-desc {
+            font-size: 12.5px;
+            color: var(--text-secondary);
+        }
+
+        /* ─── TOC ───────────────────────────────────────────────── */
+        .toc {
+            margin-top: 40px;
+        }
+
+        .toc-item {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 15px;
+        }
+
+        .toc-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            min-width: 30px;
+            flex-shrink: 0;
+        }
+
+        .toc-title {
+            font-weight: 600;
+        }
+
+        .toc-page {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-left: auto;
+        }
+
+        /* ─── Color Dots ────────────────────────────────────────── */
+        .color-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* ─── Footer ────────────────────────────────────────────── */
+        .doc-footer {
+            padding: 60px 0 40px;
+            text-align: center;
+            border-top: 1px solid var(--border);
+        }
+
+        .doc-footer p {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* ─── Responsive ────────────────────────────────────────── */
+        @media (max-width: 768px) {
+            .container { padding: 0 20px; }
+            .cover-title { font-size: 48px; }
+            .section-title { font-size: 28px; }
+            .agent-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- COVER PAGE -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="cover">
+    <div class="cover-logo">Feynman Platform</div>
+    <h1 class="cover-title">Complete Feature<br>Documentation</h1>
+    <p class="cover-subtitle">The definitive reference guide for every system, module, and interaction in the Feynman cognitive platform.</p>
+    <div class="cover-divider"></div>
+    <p class="cover-meta">Version 1.0 — April 2026</p>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- TABLE OF CONTENTS -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-cyan);">Index</div>
+            <h2 class="section-title">Table of Contents</h2>
+        </div>
+        <div class="toc">
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-cyan);">01</span>
+                <span class="toc-title">Platform Overview & Architecture</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-cyan);">02</span>
+                <span class="toc-title">The 3D Neural Brain — Knowledge Visualization</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-cyan);">03</span>
+                <span class="toc-title">Knowledge Ingestion & Lobe Mapping</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-cyan);">04</span>
+                <span class="toc-title">The Ebbinghaus Decay System — Memory Forgetting</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-cyan);">05</span>
+                <span class="toc-title">The Feynman Panel — Reinforcement Suite</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-cyan);">06</span>
+                <span class="toc-title">Node Dive — Deep Knowledge Exploration</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-cyan);">07</span>
+                <span class="toc-title">Lobe View — Regional Brain Exploration</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-cyan);">08</span>
+                <span class="toc-title">Neural Threads — Knowledge Connections</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-cyan);">09</span>
+                <span class="toc-title">Feynman AI Chat — Your Second Brain</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-cyan);">10</span>
+                <span class="toc-title">Study Mode — Adaptive Flashcards</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-cyan);">11</span>
+                <span class="toc-title">Notes Workspace — Rich Knowledge Documentation</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-cyan);">12</span>
+                <span class="toc-title">Mind Mirror — Journaling & Introspection</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-cyan);">13</span>
+                <span class="toc-title">Belief Evolution — Tracking Intellectual Growth</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-purple);">14</span>
+                <span class="toc-title">Mindscape — The Living Mind Graph</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-teal);">15</span>
+                <span class="toc-title">Delphi — Social Simulation Oracle</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-ember);">16</span>
+                <span class="toc-title">Alexander — aMCC Willpower Forge</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-green);">17</span>
+                <span class="toc-title">Engram — The Living Thinking Graph</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-cyan);">18</span>
+                <span class="toc-title">Vault — Export & Import System</span>
+            </div>
+            <div class="toc-item">
+                <span class="toc-number" style="color: var(--accent-cyan);">19</span>
+                <span class="toc-title">Command Menu & Navigation</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 01 — PLATFORM OVERVIEW -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s01">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-cyan);">Section 01</div>
+            <h2 class="section-title">Platform Overview & Architecture</h2>
+            <p class="section-desc">Feynman is a cognitive platform that treats your knowledge as a living entity. It visualizes your mind as a 3D neural brain, applies real-time memory decay, and provides AI-driven tools to ensure true conceptual ownership rather than passive recall.</p>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Core Philosophy</h3>
+            <div class="subsection-body">
+                <p>Named after Richard Feynman's principle — "If you can't explain it simply, you don't understand it well enough" — the platform enforces deep understanding through its five-stage knowledge lifecycle: <strong>Ingestion → Analysis → Decay → Reinforcement → Expansion</strong>.</p>
+            </div>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Technical Stack</h3>
+            <table class="data-table">
+                <thead>
+                    <tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Frontend</td><td>React, Three.js, React-Three-Fiber</td><td>UI rendering, 3D brain visualization</td></tr>
+                    <tr><td>State</td><td>Zustand (brainStore)</td><td>Global state for nodes, edges, panels</td></tr>
+                    <tr><td>Animation</td><td>Framer Motion</td><td>Panel transitions, micro-animations</td></tr>
+                    <tr><td>Backend</td><td>Node.js, Express</td><td>API routes, AI orchestration</td></tr>
+                    <tr><td>Database</td><td>Supabase (PostgreSQL)</td><td>User data, knowledge nodes, agent states</td></tr>
+                    <tr><td>AI Engine</td><td>Groq (Llama 3.3 70B)</td><td>Analysis, grading, simulations</td></tr>
+                    <tr><td>AI Expansion</td><td>Google Gemini</td><td>Note suggestions, knowledge gap detection</td></tr>
+                    <tr><td>Auth</td><td>Firebase Authentication</td><td>User identity, session management</td></tr>
+                    <tr><td>Real-Time</td><td>WebSocket (Socket.io)</td><td>Live sync of knowledge updates</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 02 — 3D NEURAL BRAIN -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s02">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-cyan);">Section 02</div>
+            <h2 class="section-title">The 3D Neural Brain</h2>
+            <p class="section-desc">The central visualization of the Feynman platform. Every piece of knowledge you ingest becomes a luminous node orbiting within a three-dimensional brain model, organized by functional brain region.</p>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-cyan);"></span> Knowledge Nodes</div>
+                <div class="feature-card-body">
+                    Each node is a 3D sphere rendered with <code>MeshPhysicalMaterial</code> featuring iridescence, clearcoat, and transmission properties. Node size reflects importance. Node color and glow intensity reflect current memory strength — healthy nodes glow brightly, fading nodes dim, and critical nodes pulse red.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-purple);"></span> Neural Threads</div>
+                <div class="feature-card-body">
+                    Connections between related knowledge nodes are rendered as volumetric 3D tubes (not flat lines) with pulsing animations. Each thread has an invisible wide hit-mesh (radius 0.08) for reliable click detection. Clicking a thread opens the Connection Panel showing the AI-generated relationship rationale.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-green);"></span> Ingestion Particles</div>
+                <div class="feature-card-body">
+                    When new knowledge is added, animated particles stream from the input bar along a trajectory toward the target brain region, providing visceral visual feedback that knowledge is being "absorbed" into the brain.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-blue);"></span> Environment & Lighting</div>
+                <div class="feature-card-body">
+                    The 3D scene uses a "night" <code>Environment</code> preset for consistent, renderer-safe visuals across browsers. Ambient and directional lighting ensure node materials render with premium reflections and depth.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 03 — KNOWLEDGE INGESTION -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s03">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-cyan);">Section 03</div>
+            <h2 class="section-title">Knowledge Ingestion & Lobe Mapping</h2>
+            <p class="section-desc">Raw text enters the system through the InputBar. AI analyzes the concept, classifies the broad topic, and maps it to a specific functional brain lobe — determining where the knowledge lives spatially in your 3D brain and how quickly it will naturally decay.</p>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">The InputBar</h3>
+            <div class="subsection-body">
+                <p>The primary ingestion interface. Users type or paste any concept, fact, or insight. The AI processes it in real-time through:</p>
+                <ul>
+                    <li>Topic classification (Science, History, Philosophy, etc.)</li>
+                    <li>Functional brain lobe assignment</li>
+                    <li>Feynman Analysis generation (simplified explanation, key insight, connection logic)</li>
+                    <li>Automatic connection detection to existing knowledge nodes</li>
+                    <li>Initial decay rate assignment based on lobe type</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Functional Brain Lobe Mapping</h3>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 16px;">Every node is assigned to a brain region that determines its spatial position in the 3D visualization and its initial "stickiness" (resistance to forgetting).</p>
+            <table class="data-table">
+                <thead>
+                    <tr><th>Brain Region</th><th>Functional Domain</th><th>Initial Decay Rate</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Hippocampus</td><td>Science, History (declarative facts)</td><td>0.12 (Fast)</td></tr>
+                    <tr><td>Prefrontal Cortex</td><td>Logic, Philosophy, Reasoning</td><td>0.06 (Medium)</td></tr>
+                    <tr><td>Cerebellum</td><td>Skills, Habits, Procedures</td><td>0.03 (Slow)</td></tr>
+                    <tr><td>Amygdala</td><td>Emotional processing, Personal resonance</td><td>0.06 (Medium)</td></tr>
+                    <tr><td>Wernicke's Area</td><td>Language, Communication, Definitions</td><td>0.06 (Medium)</td></tr>
+                    <tr><td>Occipital Lobe</td><td>Visual patterns, Art, Spatial concepts</td><td>0.06 (Medium)</td></tr>
+                    <tr><td>Temporal Lobe</td><td>Social Cognition, Narratives, Stories</td><td>0.10 (Fast)</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 04 — EBBINGHAUS DECAY -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s04">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-cyan);">Section 04</div>
+            <h2 class="section-title">The Ebbinghaus Decay System</h2>
+            <p class="section-desc">Feynman simulates memory decay in real-time. Once created, every knowledge node begins to "forget" — its strength is recalculated every 10 seconds using an exponential forgetting curve, making the decay visible before your eyes.</p>
+        </div>
+
+        <div class="info-block formula">
+            <p style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; opacity: 0.5;">Ebbinghaus Forgetting Formula</p>
+            <div class="formula-text">strength = 100 × e<sup>−(decayRate × daysSinceReview)</sup></div>
+            <p>Where <code>decayRate</code> is determined by the node's brain lobe assignment, and <code>daysSinceReview</code> is the time elapsed since the user last reviewed or reinforced the memory.</p>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Memory Strength States</h3>
+            <table class="data-table">
+                <thead>
+                    <tr><th>State</th><th>Strength Range</th><th>Visual Indicator</th><th>System Behavior</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td style="color: var(--accent-green); font-weight: 600;">Healthy</td><td>70–100%</td><td>Bright glow, full luminosity</td><td>No intervention needed</td></tr>
+                    <tr><td style="color: #FBBF24; font-weight: 600;">Fading</td><td>30–69%</td><td>Dimmed glow, amber tint</td><td>FadingWarning appears for reinforcement</td></tr>
+                    <tr><td style="color: var(--accent-rose); font-weight: 600;">Critical</td><td>10–29%</td><td>Pulsing red, flickering</td><td>Urgent study prompt activated</td></tr>
+                    <tr><td style="color: var(--text-dim); font-weight: 600;">Forgotten</td><td>0–9%</td><td>Nearly invisible</td><td>Node at risk of being lost</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">The Decay Ticker</h3>
+            <div class="subsection-body">
+                <p>The <code>useDecayTicker</code> hook runs a client-side interval every 10 seconds, recalculating the strength of every node in the user's brain. This ensures the 3D visualization reflects real-time memory decay — nodes literally dim and change color as time passes. The hook also provides utility functions:</p>
+                <ul>
+                    <li><strong>getForgettingCurveData()</strong> — Projects decay trajectory for visualization charts</li>
+                    <li><strong>timeUntilThreshold()</strong> — Human-readable countdown to when a node will enter "fading" or "critical" state</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Fading Warning System</h3>
+            <div class="subsection-body">
+                <p>When nodes enter fading or critical state, the <code>FadingWarning</code> component appears as an ambient notification. It counts the number of at-risk nodes and provides a direct one-click path into Study Mode, pre-filtered to show only the fading nodes that need attention.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 05 — FEYNMAN PANEL -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s05">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-cyan);">Section 05</div>
+            <h2 class="section-title">The Feynman Panel — Reinforcement Suite</h2>
+            <p class="section-desc">The primary interaction hub for deepening understanding. Triggered when clicking a knowledge node in the 3D brain, this panel provides AI-driven tools that test for genuine comprehension — not simple recall.</p>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-cyan);"></span> Feynman Analysis</div>
+                <div class="feature-card-body">
+                    Before any reinforcement begins, the system generates three foundational layers for every node:
+                    <ul>
+                        <li><strong>Simplified Explanation</strong> — How would a child understand this concept?</li>
+                        <li><strong>Key Insight</strong> — The most critical logic needed to grasp the concept</li>
+                        <li><strong>Connection Logic</strong> — How does this relate to neighboring knowledge nodes?</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: #FBBF24;"></span> The Challenge</div>
+                <div class="feature-card-body">
+                    A synthesized logic probe that prevents simple "I remember the definition" responses. The AI (Groq Llama 3) grades answers on a 0–100 scale with five verdict levels:
+                    <ul>
+                        <li><strong>Master</strong> (90–100) — Complete conceptual ownership</li>
+                        <li><strong>Understands</strong> (70–89) — Solid grasp with minor gaps</li>
+                        <li><strong>Partial</strong> (50–69) — Key pieces missing</li>
+                        <li><strong>Memorized</strong> (30–49) — Recall without true understanding</li>
+                        <li><strong>Missing It</strong> (0–29) — Fundamental misunderstanding</li>
+                    </ul>
+                    <p style="margin-top: 8px;">Success resets the node's <code>current_strength</code> back to 100, combating natural decay.</p>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-green);"></span> Teach-It Simulation</div>
+                <div class="feature-card-body">
+                    A Socratic teaching mode where the user explains the concept in simple terms to a virtual AI child. The AI evaluates for:
+                    <ul>
+                        <li>Use of jargon (penalized)</li>
+                        <li>Over-complication (penalized)</li>
+                        <li>Technical accuracy (required)</li>
+                        <li>Clarity of analogies (rewarded)</li>
+                    </ul>
+                    <p style="margin-top: 8px;">Earning "Feynman Certification" permanently reduces the node's decay rate by 10%, making the memory structurally stickier over time.</p>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-purple);"></span> Knowledge Gap Discovery</div>
+                <div class="feature-card-body">
+                    During analysis, the AI identifies related concepts that are "logically missing" from the user's current knowledge graph. These gaps are presented as interactive teasers. Clicking "Fill Gap" automatically ingests a new node and builds a neural connection to the source node.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-rose);"></span> Real-Life Moment</div>
+                <div class="feature-card-body">
+                    A hyper-contextualized "mission" generated by the AI for the user to apply their knowledge in their own life within the next week. This bridges the gap between theoretical understanding and practical application, ensuring learning transcends the screen.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 06 — NODE DIVE -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s06">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-cyan);">Section 06</div>
+            <h2 class="section-title">Node Dive — Deep Knowledge Exploration</h2>
+            <p class="section-desc">Triggered by double-clicking a knowledge node. A full-screen immersive experience for cognitive deep-dives, offering two distinct interaction modes.</p>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-rose);"></span> Strict Mode</div>
+                <div class="feature-card-body">
+                    The AI acts as an expert examiner. It challenges every claim the user makes, demands evidence for assertions, and identifies logical inconsistencies. This mode is designed to stress-test understanding and reveal hidden knowledge gaps. The AI will not accept vague or surface-level explanations.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-green);"></span> Non-Strict Mode</div>
+                <div class="feature-card-body">
+                    A conversational exploration mode. The AI acts as a collaborative partner, helping the user explore the concept from multiple angles, draw connections to other knowledge, and discover new perspectives. Ideal for creative exploration and building mental models.
+                </div>
+            </div>
+        </div>
+
+        <div class="info-block note">
+            <p><strong>Interaction Mechanics:</strong> A 300ms click timer resolves the conflict between single-click (opens Feynman Panel) and double-click (triggers Node Dive). This ensures precise, frustration-free navigation between the two features.</p>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 07 — LOBE VIEW -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s07">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-cyan);">Section 07</div>
+            <h2 class="section-title">Lobe View — Regional Brain Exploration</h2>
+            <p class="section-desc">A dedicated 3D interface for exploring knowledge within a specific brain lobe. Activated by clicking a lobe indicator in the brain visualization, it zooms into that region and displays only the nodes assigned to that functional area.</p>
+        </div>
+
+        <div class="subsection-body">
+            <p>Lobe View provides a focused, region-specific environment where users can:</p>
+            <ul>
+                <li>See all knowledge nodes within a specific brain region (Hippocampus, Prefrontal Cortex, etc.)</li>
+                <li>Visualize the connections between nodes in that region</li>
+                <li>Identify which knowledge is healthy, fading, or critical within each domain</li>
+                <li>Interact with individual nodes for reinforcement</li>
+                <li>Understand the topological density of their knowledge in specific fields</li>
+            </ul>
+            <p style="margin-top: 12px;">The transition into Lobe View is handled by the <code>LobeDiveTransition</code> component, which provides a smooth animated zoom effect from the full brain to the target lobe.</p>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 08 — NEURAL THREADS -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s08">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-cyan);">Section 08</div>
+            <h2 class="section-title">Neural Threads — Knowledge Connections</h2>
+            <p class="section-desc">The connective tissue of the knowledge brain. Neural threads represent AI-detected relationships between knowledge nodes, visualized as volumetric 3D tubes with pulsing energy animations.</p>
+        </div>
+
+        <div class="subsection-body">
+            <p>When a user clicks an existing neural thread, the Connection Panel opens, providing:</p>
+            <ul>
+                <li><strong>Relationship Rationale</strong> — AI-generated explanation of why these two concepts are connected</li>
+                <li><strong>Connection Strength</strong> — Visual indicator of how strong the conceptual link is</li>
+                <li><strong>Source & Target Details</strong> — Quick access to both connected nodes</li>
+            </ul>
+        </div>
+
+        <div class="info-block note">
+            <p><strong>Technical Detail:</strong> Threads are rendered as THREE.TubeGeometry with THREE.MeshPhysicalMaterial. An invisible wide hit-mesh (radius 0.08) wraps each thread to ensure reliable click detection even on thin connections. This prevents frustrating miss-clicks on mobile and desktop.</p>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 09 — CHAT -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s09">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-cyan);">Section 09</div>
+            <h2 class="section-title">Feynman AI Chat — Your Second Brain</h2>
+            <p class="section-desc">A conversational AI interface that knows everything in your brain. Feynman AI references your stored knowledge nodes when answering questions, creating a personalized AI assistant grounded in your own learning.</p>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-cyan);"></span> Knowledge-Grounded Responses</div>
+                <div class="feature-card-body">
+                    Every response explicitly references which nodes from your brain were used to construct the answer. These appear as clickable "FROM YOUR BRAIN" badges at the bottom of each message, creating full transparency about the AI's reasoning chain.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-purple);"></span> Why Chain Mode</div>
+                <div class="feature-card-body">
+                    An advanced introspection tool. When enabled, after the AI answers any question, it enters a 5-level "Why Chain" — progressively deeper questions that drill down to first principles:
+                    <ul>
+                        <li>Each level asks "why?" about the previous answer</li>
+                        <li>Progress visualized with a depth indicator (1/5 → 5/5)</li>
+                        <li>After 5 levels, generates a comprehensive conceptual analysis</li>
+                        <li>Can be exited at any point by pressing "End"</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-blue);"></span> Rich Markdown Rendering</div>
+                <div class="feature-card-body">
+                    All AI responses render with full markdown support: headers, bold/italic, inline code, ordered and unordered lists, horizontal rules, and links — all styled with the Feynman neural aesthetic.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-green);"></span> Compact & Expanded Views</div>
+                <div class="feature-card-body">
+                    The chat panel supports two layouts: a compact sidebar mode (360px) overlaying the brain, and a full-screen expanded mode (800px centered). Toggle between them with the expand/collapse button. On mobile, it defaults to full-screen.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 10 — STUDY MODE -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s10">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-cyan);">Section 10</div>
+            <h2 class="section-title">Study Mode — Adaptive Flashcards</h2>
+            <p class="section-desc">An AI-driven adaptive flashcard system that prioritizes fading and critical knowledge nodes. Each session dynamically generates questions based on the user's current memory strengths, ensuring study time is spent where it matters most.</p>
+        </div>
+
+        <div class="subsection-body">
+            <p>Study Mode features:</p>
+            <ul>
+                <li><strong>Priority Ordering</strong> — Nodes closest to critical state appear first</li>
+                <li><strong>Pre-filtered Sessions</strong> — Can be launched from FadingWarning with only at-risk nodes</li>
+                <li><strong>AI-Generated Questions</strong> — Each flashcard question is uniquely synthesized per session, preventing memorization of fixed question sets</li>
+                <li><strong>Session Tracking</strong> — Records completion rates, scores, and time spent across sessions</li>
+                <li><strong>Strength Reset</strong> — Successfully answering a flashcard resets the node's strength, pushing back decay</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 11 — NOTES WORKSPACE -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s11">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-cyan);">Section 11</div>
+            <h2 class="section-title">Notes Workspace — Rich Knowledge Documentation</h2>
+            <p class="section-desc">A full-screen note-taking workspace inspired by Obsidian, built directly into Feynman. Write freely, then let AI extract knowledge nodes from your notes — bridging unstructured thinking and structured knowledge.</p>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: #F59E0B;"></span> Rich Text Editing</div>
+                <div class="feature-card-body">
+                    Unlimited notes with sidebar navigation, markdown-style formatting, auto-save with debounced persistence (1-second delay), and pin/unpin capability to keep important notes at the top.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-purple);"></span> Image Upload</div>
+                <div class="feature-card-body">
+                    Supports both drag-and-drop and button-based image uploads. Inline images are resizable (drag handles), zoomable (click to open full), and removable. Images flow naturally in the document like Obsidian.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-cyan);"></span> Voice Recording</div>
+                <div class="feature-card-body">
+                    Full voice note recording using the Web Audio API with professional audio settings:
+                    <ul>
+                        <li>Echo cancellation and noise suppression enabled</li>
+                        <li>Auto gain control for consistent volume</li>
+                        <li>48kHz sample rate for voice clarity</li>
+                        <li>128kbps bitrate with Opus codec support</li>
+                        <li>Custom audio player with seek bar, volume control (up to 200%), and renameable voice notes</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-green);"></span> AI Knowledge Extraction</div>
+                <div class="feature-card-body">
+                    The "Analyze with AI" button sends note content to Gemini, which suggests new knowledge nodes based on the user's writing. Each suggestion includes a title, content summary, and category. Users approve or dismiss each suggestion — approved suggestions are ingested directly into the 3D brain as new nodes.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-blue);"></span> Markdown Export</div>
+                <div class="feature-card-body">
+                    Notes can be downloaded individually as markdown files, preserving formatting and structure for use in external tools like Obsidian, Notion, or any markdown editor.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 12 — MIND MIRROR -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s12">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-cyan);">Section 12</div>
+            <h2 class="section-title">Mind Mirror — Journaling & Introspection</h2>
+            <p class="section-desc">A dedicated journaling interface for emotional and psychological introspection. Unlike the Notes Workspace (which is for knowledge documentation), Mind Mirror is designed for raw, unfiltered self-reflection that feeds into the Mindscape emotional analysis system.</p>
+        </div>
+
+        <div class="subsection-body">
+            <p>Mind Mirror provides multiple introspection modes that help users explore their inner landscape:</p>
+            <ul>
+                <li><strong>Free Writing</strong> — Stream-of-consciousness journaling with no constraints</li>
+                <li><strong>Guided Prompts</strong> — AI-generated reflection prompts tailored to the user's emotional state</li>
+                <li><strong>Emotional Tagging</strong> — Journal entries feed into the Mindscape's emotional agent system</li>
+                <li><strong>Historical Review</strong> — Browse past entries to track emotional patterns over time</li>
+            </ul>
+            <p style="margin-top: 12px;">Journal entries are processed by the Mindscape backend to update emotional agent states, contributing to the Mirror Report and the living mind graph.</p>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 13 — BELIEF EVOLUTION -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s13">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-cyan);">Section 13</div>
+            <h2 class="section-title">Belief Evolution — Tracking Intellectual Growth</h2>
+            <p class="section-desc">An automatic tracking system that monitors how your beliefs change as you add more knowledge. Beliefs are extracted passively from your knowledge — you don't need to do anything special. Feynman detects when new information reinforces, refines, contradicts, or evolves your existing beliefs.</p>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Shift Types</h3>
+            <table class="data-table">
+                <thead>
+                    <tr><th>Type</th><th>Symbol</th><th>Meaning</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td style="color: #4a9eba; font-weight: 600;">Reinforcement</td><td>◎</td><td>New knowledge strengthens an existing belief</td></tr>
+                    <tr><td style="color: #b794f6; font-weight: 600;">Refinement</td><td>○</td><td>New knowledge adds nuance or precision to a belief</td></tr>
+                    <tr><td style="color: #ff6b6b; font-weight: 600;">Contradiction</td><td>◆</td><td>New knowledge directly opposes a previously held belief</td></tr>
+                    <tr><td style="color: #00d4ff; font-weight: 600;">Evolution</td><td>△</td><td>Belief has fundamentally transformed through accumulated evidence</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="subsection-body" style="margin-top: 24px;">
+            <p>The Belief Evolution panel displays:</p>
+            <ul>
+                <li><strong>Stats Dashboard</strong> — Total beliefs tracked, total shifts detected, and the most evolving topic</li>
+                <li><strong>Timeline View</strong> — Chronological feed of all belief shifts with "was → now" comparison cards</li>
+                <li><strong>Visual Indicators</strong> — Contradicted beliefs show strikethrough text on the original belief</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 14 — MINDSCAPE -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s14">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-purple);">Section 14</div>
+            <h2 class="section-title">Mindscape — The Living Mind Graph</h2>
+            <p class="section-desc">A full-viewport 2D mind graph paired with a 26-agent emotional simulation engine. Mindscape maps your psychological landscape — not your knowledge, but your emotional architecture. It is the emotional counterpart to the 3D knowledge brain.</p>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-purple);"></span> Mind Graph</div>
+                <div class="feature-card-body">
+                    A force-directed graph that maps psychological constructs — thoughts, beliefs, emotional patterns — as interconnected nodes. Supports filtering by type, timeline cutoff for temporal analysis, and history mode for reviewing past snapshots of your psychological state.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-rose);"></span> 26 Emotional Agents</div>
+                <div class="feature-card-body">
+                    The Agent Simulation panel houses 26 distinct emotional agents, each representing a specific psychological force. These agents process your journal entries and knowledge to calculate dominance scores, creating a real-time emotional profile.
+                    <ul>
+                        <li><strong>Core 8 (Plutchik Primary)</strong> — Sentinel (Fear), Fury (Anger), Euphoric (Joy), Mourner (Sadness), Believer (Trust), Purist (Disgust), Oracle (Anticipation), Witness (Surprise)</li>
+                        <li><strong>Self-Conscious</strong> — Phantom (Guilt), Exile (Shame), Crown (Pride)</li>
+                        <li><strong>Social</strong> — Mirror (Envy), Hollow (Loneliness), Bridge (Empathy), Garden (Gratitude)</li>
+                        <li><strong>Anticipatory</strong> — Void (Anxiety), Torch (Hope), Ghost (Regret)</li>
+                        <li><strong>Complex Dyads</strong> — Judge (Contempt), Hearth (Love), Sublime (Awe), Abyss (Despair)</li>
+                        <li><strong>Behavioral</strong> — Wanderer (Curiosity), Anchor (Nostalgia), Spark (Frustration), Drift (Boredom)</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-ember);"></span> Dominance Visualization</div>
+                <div class="feature-card-body">
+                    Two visual representations of emotional agent dominance:
+                    <ul>
+                        <li><strong>Arc Chart</strong> — A floating SVG ring in the bottom-left of the graph showing proportional dominance of each active agent</li>
+                        <li><strong>Mini Bar</strong> — A compact horizontal bar in the top navigation showing top 8 agents at a glance</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-teal);"></span> Agent Memory Panel</div>
+                <div class="feature-card-body">
+                    Each emotional agent maintains its own memory — a history of the journal entries, thoughts, and knowledge that influenced its dominance score. This panel provides transparency into why specific agents are active or dormant.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-blue);"></span> Mirror Report</div>
+                <div class="feature-card-body">
+                    A periodic psychological synthesis generated by the AI. The Mirror Report analyzes your emotional agent state trajectories and mind graph topology to produce a narrative insight report. New reports within 24 hours trigger a notification dot on the Mirror tab. Full-screen reading mode available.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-green);"></span> Agent Dialogue Overlay</div>
+                <div class="feature-card-body">
+                    During active simulations, emotional agents visually debate on the graph canvas itself. Each agent appears as a node in a neural constellation pattern, with speech bubbles showing their contributions. The currently speaking agent is highlighted.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: #FBBF24;"></span> God View Controls</div>
+                <div class="feature-card-body">
+                    A toolbar for graph manipulation: filtering nodes by type, adjusting timeline cutoff, triggering agent simulation, toggling history mode, and browsing historical graph snapshots to see how your mind has changed over time.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-cyan);"></span> Node Sidebar</div>
+                <div class="feature-card-body">
+                    Clicking any node in the mind graph opens a detailed sidebar showing the node's content, its connections to other nodes, and a resolve/unresolve toggle for tracking the status of psychological conflicts or questions.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 15 — DELPHI -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s15">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-teal);">Section 15</div>
+            <h2 class="section-title">Delphi — Social Simulation Oracle</h2>
+            <p class="section-desc">Simulate your people before you face them. Delphi lets you build AI-driven personality models of real people in your life, then simulate how they would react to any scenario — before you have the actual conversation.</p>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-teal);"></span> Council Management</div>
+                <div class="feature-card-body">
+                    Build a "council" of AI personality agents representing people in your life. Two creation methods:
+                    <ul>
+                        <li><strong>Quick Add</strong> — Name, relationship, and description in one form</li>
+                        <li><strong>Build via Chat</strong> — Conversational agent builder where you describe the person through dialogue with Delphi, who asks probing questions to build a richer personality model</li>
+                    </ul>
+                    <p style="margin-top: 8px;">Each agent is assigned a unique color, initials, and relationship tag. Agents can be deleted from the council at any time.</p>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-purple);"></span> Multi-Agent Scenario Simulation</div>
+                <div class="feature-card-body">
+                    Type any scenario (e.g., "I want to drop out of college and pursue my startup") and Delphi simulates how your council members would react. The simulation runs in multiple conversation rounds:
+                    <ul>
+                        <li><strong>Round 1 — Initial Reactions</strong>: Each agent responds independently to the scenario</li>
+                        <li><strong>Round 2+ — Cross-Discussion</strong>: Agents respond to each other, creating realistic group dynamics</li>
+                        <li>Messages stream at a readable pace with typewriter animation (38ms per character)</li>
+                        <li>Round dividers mark the transition between initial reactions and cross-discussion</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-blue);"></span> Post-Simulation Intelligence</div>
+                <div class="feature-card-body">
+                    After the simulation completes, three analysis layers appear:
+                    <ul>
+                        <li><strong>Insights</strong> — Key takeaways with color-coded severity (red, green, blue, amber)</li>
+                        <li><strong>Outcome Probability</strong> — Calibrated percentage predictions for possible outcomes with sentiment indicators (positive, negative, neutral)</li>
+                        <li><strong>Trigger Map</strong> — Per-person language intelligence showing what phrases to avoid and what to say instead</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: #06B6D4;"></span> Rehearsal Mode</div>
+                <div class="feature-card-body">
+                    After observing the simulation, the user can enter the conversation themselves. Type what you would actually say, and each council member responds in real time based on their personality model and the established conversation context. This creates a safe practice ground for difficult conversations.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-green);"></span> Post-Conversation Debrief</div>
+                <div class="feature-card-body">
+                    After having the real conversation, return to Delphi and describe what actually happened. The system compares its predictions with reality, generating:
+                    <ul>
+                        <li><strong>Accuracy Score</strong> — 0–100% rating with color coding (green ≥70%, amber ≥40%, red <40%)</li>
+                        <li><strong>Aspect Comparison</strong> — Per-aspect breakdown of what was predicted versus what actually happened</li>
+                        <li><strong>Agent Model Updates</strong> — Learnings that sharpen the personality models for future simulations</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: #FBBF24;"></span> Simulation History</div>
+                <div class="feature-card-body">
+                    All past simulations are stored and replayable. The History tab shows a chronological list with scenario previews, insight headlines, debrief status indicators, and one-click replay functionality.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 16 — ALEXANDER -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s16">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-ember);">Section 16</div>
+            <h2 class="section-title">Alexander — aMCC Willpower Forge</h2>
+            <p class="section-desc">Not a tracker. A forge. Alexander is built on the neuroscience of the anterior midcingulate cortex (aMCC) — the brain region that grows only through resistance. This system makes the process of doing what you genuinely don't want to do visceral and rewarding.</p>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-ember);"></span> Neural Canvas Visualization</div>
+                <div class="feature-card-body">
+                    A living, breathing canvas animation representing your aMCC growth. Features:
+                    <ul>
+                        <li>Performance-optimized particle system (70 particles desktop, 35 mobile)</li>
+                        <li>Batched draw calls with three alpha-bucket connection rendering</li>
+                        <li>Core glow that expands as total points increase</li>
+                        <li>Pulse effect triggered on every task completion</li>
+                        <li>Growth-scaled particle size and connection density</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: #34D399;"></span> Task System</div>
+                <div class="feature-card-body">
+                    Create "resistance tasks" — things you're actively avoiding. Each task has:
+                    <ul>
+                        <li><strong>Resistance Rating</strong> (1–5) — From "Mild" to "Pure Hell," rated before starting — not after</li>
+                        <li><strong>Domain Category</strong> — Body, Mind, Social, Career, or Fear</li>
+                        <li><strong>Lock-In Mechanic</strong> — Before completing, you must first "Lock" the task (800ms sweep animation), sealing the resistance level</li>
+                        <li><strong>Avoidance Multiplier</strong> — Tasks avoided for 3+ days earn bonus points (1.5×, 2×, etc.)</li>
+                        <li><strong>Streak Tracking</strong> — Consecutive completions tracked with a fire emoji counter</li>
+                        <li><strong>Point Calculation</strong> — Base points = Resistance × 25, multiplied by avoidance bonus</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Growth Stages</h3>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 16px;">Your aMCC evolves through five neuroplasticity stages based on total accumulated resistance points:</p>
+            <div class="stages-list">
+                <div class="stage-item">
+                    <div class="stage-dot" style="background: #4B5563;"></div>
+                    <div class="stage-name" style="color: #4B5563;">Dormant</div>
+                    <div class="stage-range">0–200</div>
+                    <div class="stage-desc">Resting state. Every task feels mountainous.</div>
+                </div>
+                <div class="stage-item">
+                    <div class="stage-dot" style="background: #34D399;"></div>
+                    <div class="stage-name" style="color: #34D399;">Awakening</div>
+                    <div class="stage-range">200–500</div>
+                    <div class="stage-desc">First neural changes. The after-feeling shifts.</div>
+                </div>
+                <div class="stage-item">
+                    <div class="stage-dot" style="background: #E8A838;"></div>
+                    <div class="stage-name" style="color: #E8A838;">Forging</div>
+                    <div class="stage-range">500–1,000</div>
+                    <div class="stage-desc">Active neuroplasticity. You can feel the rewiring.</div>
+                </div>
+                <div class="stage-item">
+                    <div class="stage-dot" style="background: #A78BFA;"></div>
+                    <div class="stage-name" style="color: #A78BFA;">Tempered</div>
+                    <div class="stage-range">1,000–2,000</div>
+                    <div class="stage-desc">Resistance to starting dissolves. Approach reflex rewired.</div>
+                </div>
+                <div class="stage-item">
+                    <div class="stage-dot" style="background: #E85D4A;"></div>
+                    <div class="stage-name" style="color: #E85D4A;">Indomitable</div>
+                    <div class="stage-range">2,000–∞</div>
+                    <div class="stage-desc">Super-ager territory. Top 2% aMCC development.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Additional Features</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-green);"></span> Resistance Ring</div>
+                    <div class="feature-card-body">
+                        A half-circle SVG arc showing progress within the current stage, with stage markers and a pulsing glow at the current position.
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-cyan);"></span> Activity Log</div>
+                    <div class="feature-card-body">
+                        A chronological ledger of every completed resistance task — "proof of who you're becoming." Shows points earned, task title, resistance level, and relative time.
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-purple);"></span> Journey Panel</div>
+                    <div class="feature-card-body">
+                        A milestone progression view showing all five stages with progress bars, completion status, and descriptive text. Active stage shows a live progress bar with current score.
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-ember);"></span> Completion Burst</div>
+                    <div class="feature-card-body">
+                        Visual celebration animation when a task is completed — large point value appears center-screen with a "aMCC Growth" label, accompanied by a green glow and scale animation.
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-blue);"></span> Animated Counter</div>
+                    <div class="feature-card-body">
+                        Total score counter that animates between values using requestAnimationFrame and direct DOM manipulation (no React re-renders), maintaining a smooth, physically-correct count-up/down animation.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-block note">
+            <p><strong>Persistence:</strong> Alexander data is stored per-user in localStorage, scoped by Firebase UID. This includes all tasks, the activity log, and total points. Data persists across sessions and migrates cleanly when users switch accounts.</p>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 17 — ENGRAM -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s17">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-green);">Section 17</div>
+            <h2 class="section-title">Engram — The Living Thinking Graph</h2>
+            <p class="section-desc">A tool for externalizing and mapping your thinking process. Unlike the main brain (which stores factual knowledge) and Mindscape (which maps emotions), Engram captures the evolution of your thoughts across conversations — extracting what matters from your AI interactions and building a connected thinking graph.</p>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-green);"></span> Thought Graph (Canvas 2D Engine)</div>
+                <div class="feature-card-body">
+                    A custom-built force-directed graph renderer using native HTML5 Canvas 2D API. This dependency-free implementation was specifically chosen to avoid WebGL context conflicts with the 3D brain visualization. Features:
+                    <ul>
+                        <li>Physics-based force simulation with attraction, repulsion, and centering forces</li>
+                        <li>Interactive pan and zoom with smooth animation</li>
+                        <li>Maturity-colored nodes (seed → sprouting → growing → mature → evolved)</li>
+                        <li>Click-to-select nodes with detailed sidebar view</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: #3DD6F5;"></span> Conversation Ingestion</div>
+                <div class="feature-card-body">
+                    Paste any AI conversation into the IngestPanel. The backend (Groq Llama 3.3 70B) extracts discrete thoughts mentioned in the conversation, identifies relationships between them, and builds a connected graph of your thinking. The AI distinguishes between:
+                    <ul>
+                        <li>Core insights vs. supporting details</li>
+                        <li>Questions vs. conclusions</li>
+                        <li>Contradictions vs. refinements</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-purple);"></span> AI Chat Import Pipeline</div>
+                <div class="feature-card-body">
+                    A universal importer supporting direct file upload from major AI platforms:
+                    <ul>
+                        <li><strong>Claude</strong> — JSON conversation exports</li>
+                        <li><strong>ChatGPT</strong> — JSON conversation exports</li>
+                        <li><strong>Gemini</strong> — JSON conversation exports</li>
+                    </ul>
+                    <p style="margin-top: 8px;">The 3-step import flow: Upload file → Select conversations from the parsed list → Process selected conversations into the Engram graph. Each platform's export format is normalized into a unified internal structure by the <code>importer.js</code> service.</p>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-rose);"></span> Intelligence Layer (InsightLayer)</div>
+                <div class="feature-card-body">
+                    A premium overlay panel providing three AI-driven cognitive analysis tools:
+                    <ul>
+                        <li><strong>Velocity</strong> — Tracks how quickly your thinking is evolving, measuring the rate of new thought creation and connection formation</li>
+                        <li><strong>Contradictions</strong> — Detects conflicting thoughts within your graph, surfacing inconsistencies in your thinking</li>
+                        <li><strong>Gravity Wells</strong> — Identifies the "unasked questions" — important inquiries that your current thinking implies but that you haven't yet explored</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-ember);"></span> Thought Maturity System</div>
+                <div class="feature-card-body">
+                    Each thought node has a maturity level that evolves as the thought is reinforced through multiple conversations:
+                    <table class="data-table" style="margin-top: 8px;">
+                        <tr><td style="color: #6B7280; font-weight: 600;">Seed</td><td>Mentioned once, not yet developed</td></tr>
+                        <tr><td style="color: #34D399; font-weight: 600;">Sprouting</td><td>Beginning to grow connections</td></tr>
+                        <tr><td style="color: #FBBF24; font-weight: 600;">Growing</td><td>Actively being developed and refined</td></tr>
+                        <tr><td style="color: #3DD6F5; font-weight: 600;">Mature</td><td>Well-established with multiple connections</td></tr>
+                        <tr><td style="color: #A78BFA; font-weight: 600;">Evolved</td><td>Has undergone significant revision or deepening</td></tr>
+                    </table>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-blue);"></span> Stats Bar</div>
+                <div class="feature-card-body">
+                    A persistent status bar showing real-time metrics: total thought count, maturity breakdown distribution, and processing status during ingestion.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 18 — VAULT SYSTEM -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s18">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-cyan);">Section 18</div>
+            <h2 class="section-title">Vault — Export & Import System</h2>
+            <p class="section-desc">The Vault system ensures your knowledge is never locked in. Export your entire brain as structured markdown files, or import existing markdown/Obsidian vaults into Feynman.</p>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: #00ff88;"></span> Vault Export</div>
+                <div class="feature-card-body">
+                    Exports all knowledge nodes as a ZIP archive of structured markdown files. Each node becomes an individual <code>.md</code> file with frontmatter metadata (decay rate, lobe assignment, strength, connections). The system tracks the last export timestamp and node count, alerting users via the Command Menu when the vault is out of sync.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-title"><span class="color-dot" style="background: var(--accent-purple);"></span> Vault Import</div>
+                <div class="feature-card-body">
+                    Import markdown files or Obsidian vaults into Feynman via the <code>VaultImportModal</code>. The import process parses markdown content, extracts frontmatter metadata, and creates knowledge nodes in the 3D brain with appropriate lobe mapping and connection detection.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 19 — COMMAND MENU -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="s19">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-number" style="color: var(--accent-cyan);">Section 19</div>
+            <h2 class="section-title">Command Menu & Navigation</h2>
+            <p class="section-desc">The single floating button that serves as the unified access point for all platform features. Replaces scattered floating buttons with one clean, discoverable interface.</p>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Available Commands</h3>
+            <table class="data-table">
+                <thead>
+                    <tr><th>Icon</th><th>Label</th><th>Description</th><th>Accent Color</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>◎</td><td>Chat</td><td>Talk to Feynman AI</td><td style="color: var(--accent-cyan);">Cyan</td></tr>
+                    <tr><td>◬</td><td>Beliefs</td><td>Belief Evolution tracking</td><td style="color: var(--accent-cyan);">Cyan</td></tr>
+                    <tr><td>▦</td><td>Study</td><td>Study Mode flashcards</td><td style="color: var(--accent-purple);">Purple</td></tr>
+                    <tr><td>▤</td><td>Notes</td><td>Full Notes Workspace</td><td style="color: #F59E0B;">Amber</td></tr>
+                    <tr><td>◈</td><td>Mind Mirror</td><td>Journaling & introspection</td><td style="color: #a78bfa;">Lavender</td></tr>
+                    <tr><td>◉</td><td>Mindscape</td><td>Living mind graph</td><td style="color: var(--accent-purple);">Purple</td></tr>
+                    <tr><td>◇</td><td>Delphi</td><td>Social simulation oracle</td><td style="color: var(--accent-teal);">Teal</td></tr>
+                    <tr><td>◆</td><td>Alexander</td><td>aMCC Resistance Training</td><td style="color: var(--accent-ember);">Ember</td></tr>
+                    <tr><td>⬡</td><td>Engram</td><td>Living Thinking Graph</td><td style="color: var(--accent-green);">Green</td></tr>
+                    <tr><td>▣</td><td>Vault</td><td>Export as Markdown ZIP</td><td style="color: #00ff88;">Bright Green</td></tr>
+                    <tr><td>▽</td><td>Import</td><td>Import Markdown/Obsidian</td><td style="color: #a78bfa;">Lavender</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Panel Management</h3>
+            <div class="subsection-body">
+                <p>The application enforces mutual exclusivity between major panels. Opening any feature (Chat, Study, Notes, Mindscape, Delphi, Alexander, Engram) automatically closes all other open panels. This prevents visual conflicts and ensures the user's full attention is devoted to one feature at a time.</p>
+                <p style="margin-top: 8px;">The Command Menu itself closes on outside click or Escape key press, and includes an active panel indicator showing which feature is currently open.</p>
+            </div>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Responsive Design</h3>
+            <div class="subsection-body">
+                <p>The entire platform uses the <code>useResponsive()</code> hook to provide adaptive layouts across devices:</p>
+                <ul>
+                    <li><strong>Mobile</strong> — Full-screen panels, bottom sheet transitions, touch-optimized controls</li>
+                    <li><strong>Tablet</strong> — Reduced panel widths (320px vs 380px), adjusted padding</li>
+                    <li><strong>Desktop</strong> — Full-width panels, blur-heavy glassmorphism, hover effects</li>
+                    <li><strong>Touch Detection</strong> — Reduced backdrop-filter intensity on touch devices for performance</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- FOOTER -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="doc-footer">
+    <div class="container">
+        <div class="cover-divider" style="margin-bottom: 24px;"></div>
+        <p>Feynman Platform Documentation — Version 1.0</p>
+        <p style="margin-top: 4px; opacity: 0.5;">April 2026 — All features verified against source code</p>
+    </div>
+</div>
+
+</body>
+</html>

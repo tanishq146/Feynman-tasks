@@ -18,6 +18,7 @@ import MindMirror from './components/UI/MindMirror';
 import MindscapePage from './components/mindscape/MindscapePage';
 import DelphiPage from './components/delphi/DelphiPage';
 import AlexanderPage from './components/alexander/AlexanderPage';
+import EngramPage from './components/engram/EngramPage';
 
 import Toast from './components/UI/Toast';
 
@@ -53,10 +54,13 @@ function FeynmanApp() {
   const [mindscapeOpen, setMindscapeOpen] = useState(false);
   const [delphiOpen, setDelphiOpen] = useState(false);
   const [alexanderOpen, setAlexanderOpen] = useState(false);
+  const [engramOpen, setEngramOpen] = useState(() => {
+    return window.location.pathname === '/engram';
+  });
 
 
   // Track which panel is currently active for the menu indicator
-  const activePanel = chatOpen ? 'chat' : beliefPanelOpen ? 'beliefs' : studyModeOpen ? 'study' : notesWorkspaceOpen ? 'notes' : mindMirrorOpen ? 'mirror' : mindscapeOpen ? 'mindscape' : delphiOpen ? 'delphi' : alexanderOpen ? 'alexander' : null;
+  const activePanel = chatOpen ? 'chat' : beliefPanelOpen ? 'beliefs' : studyModeOpen ? 'study' : notesWorkspaceOpen ? 'notes' : mindMirrorOpen ? 'mirror' : mindscapeOpen ? 'mindscape' : delphiOpen ? 'delphi' : alexanderOpen ? 'alexander' : engramOpen ? 'engram' : null;
 
   const handleStudyFromWarning = useCallback((nodeIds) => {
     setStudyPrefilteredIds(nodeIds);
@@ -79,6 +83,7 @@ function FeynmanApp() {
       setMindscapeOpen(false);
       setDelphiOpen(false);
       setAlexanderOpen(false);
+      setEngramOpen(false);
     } else if (id === 'beliefs') {
       setBeliefPanelOpen(prev => !prev);
       setChatOpen(false);
@@ -88,6 +93,7 @@ function FeynmanApp() {
       setMindscapeOpen(false);
       setDelphiOpen(false);
       setAlexanderOpen(false);
+      setEngramOpen(false);
     } else if (id === 'study') {
       setStudyPrefilteredIds(null);
       setStudyModeOpen(prev => !prev);
@@ -98,6 +104,7 @@ function FeynmanApp() {
       setMindscapeOpen(false);
       setDelphiOpen(false);
       setAlexanderOpen(false);
+      setEngramOpen(false);
     } else if (id === 'notes') {
       setNotesWorkspaceOpen(prev => !prev);
       setChatOpen(false);
@@ -107,6 +114,7 @@ function FeynmanApp() {
       setMindscapeOpen(false);
       setDelphiOpen(false);
       setAlexanderOpen(false);
+      setEngramOpen(false);
     } else if (id === 'mirror') {
       setMindMirrorOpen(prev => !prev);
       setChatOpen(false);
@@ -116,6 +124,7 @@ function FeynmanApp() {
       setMindscapeOpen(false);
       setDelphiOpen(false);
       setAlexanderOpen(false);
+      setEngramOpen(false);
     } else if (id === 'mindscape') {
       setMindscapeOpen(prev => !prev);
       setChatOpen(false);
@@ -125,6 +134,7 @@ function FeynmanApp() {
       setMindMirrorOpen(false);
       setDelphiOpen(false);
       setAlexanderOpen(false);
+      setEngramOpen(false);
     } else if (id === 'delphi') {
       setDelphiOpen(prev => !prev);
       setChatOpen(false);
@@ -134,6 +144,7 @@ function FeynmanApp() {
       setMindMirrorOpen(false);
       setMindscapeOpen(false);
       setAlexanderOpen(false);
+      setEngramOpen(false);
     } else if (id === 'alexander') {
       setAlexanderOpen(prev => !prev);
       setChatOpen(false);
@@ -143,6 +154,17 @@ function FeynmanApp() {
       setMindMirrorOpen(false);
       setMindscapeOpen(false);
       setDelphiOpen(false);
+      setEngramOpen(false);
+    } else if (id === 'engram') {
+      setEngramOpen(prev => !prev);
+      setChatOpen(false);
+      setBeliefPanelOpen(false);
+      setStudyModeOpen(false);
+      setNotesWorkspaceOpen(false);
+      setMindMirrorOpen(false);
+      setMindscapeOpen(false);
+      setDelphiOpen(false);
+      setAlexanderOpen(false);
     }
   }, []);
 
@@ -242,6 +264,9 @@ function FeynmanApp() {
 
       {/* Delphi — Custom Agent Simulation */}
       <DelphiPage isOpen={delphiOpen} onClose={() => setDelphiOpen(false)} />
+
+      {/* Engram — Living Thinking Graph */}
+      <EngramPage isOpen={engramOpen} onClose={() => setEngramOpen(false)} />
 
 
 

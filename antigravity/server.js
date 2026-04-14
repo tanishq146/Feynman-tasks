@@ -35,6 +35,7 @@ import notesRoutes from './routes/notes.js';
 import workspaceRoutes from './routes/workspace.js';
 import mindmirrorRoutes from './routes/mindmirror.js';
 import delphiRoutes from './routes/delphi.js';
+import engramRoutes from './routes/engram.js';
 
 
 // ─── Express App ────────────────────────────────────────────────────────────
@@ -87,6 +88,7 @@ app.use('/api/notes', requireAuth, notesRoutes);
 app.use('/api/workspace', requireAuth, workspaceRoutes);
 app.use('/api/mindmirror', requireAuth, mindmirrorRoutes);
 app.use('/api/delphi', requireAuth, delphiRoutes);
+app.use('/api/engram', requireAuth, engramRoutes);
 
 
 // ─── 404 Catch-all ──────────────────────────────────────────────────────────

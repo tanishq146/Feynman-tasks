@@ -49,7 +49,11 @@ export async function requireAuth(req, res, next) {
         // This lets you dev locally without a service account key
         try {
             // Firebase ID tokens are JWTs — decode the payload (base64url)
-            const payload = token.split('.')[1];
+            const parts = token.split('.');
+            if (!parts || parts.length < 2 || !parts[1]) {
+                throw new Error('Token is not a valid JWT (missing payload segment)');
+            }
+            const payload = parts[1];
             // Use base64url decoding (replace - with + and _ with /)
             const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
             const decoded = JSON.parse(Buffer.from(base64, 'base64').toString());
